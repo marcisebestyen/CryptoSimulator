@@ -26,11 +26,9 @@ namespace CryptoSimulator.Services
             // MyCryptos mappings
             CreateMap<MyCryptos, MyCryptosDto>();
             CreateMap<MyCryptosDto, MyCryptos>();
-            CreateMap<MyCryptosDto, MyCryptos>();
 
             // CryptoLog mappings
             CreateMap<CryptoLog, CryptoLogDto>();
-            CreateMap<CryptoLogDto, CryptoLog>();
             CreateMap<CryptoLogDto, CryptoLog>();
 
             // Crypto mappings

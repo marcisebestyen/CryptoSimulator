@@ -20,17 +20,21 @@ namespace CryptoSimulator.Controllers
         }
 
         [HttpGet("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserGetDto))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<UserGetDto>> GetUser(int id)
         {
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(id);
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(new object[] { id }, null, null);
             if (user == null)
             {
-                return NotFound();
+                return NotFound($"User with ID {id} not found.");
             }
             return Ok(_mapper.Map<UserGetDto>(user));
         }
 
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(UserGetDto))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<UserGetDto>> CreateUser(UserPostDto dto)
         {
             var user = _mapper.Map<User>(dto);
@@ -40,13 +44,15 @@ namespace CryptoSimulator.Controllers
             return CreatedAtAction(nameof(GetUser), new { id = user.Id }, userGetDto);
         }
 
-        [HttpPut]
-        public async Task<ActionResult<UserGetDto>> UpdateUser(UserPutDto dto)
+        [HttpPut("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserGetDto))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<UserGetDto>> UpdateUser(int id, UserPutDto dto)
         {
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(dto.Id);
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(new object[] { id }, null, null);
             if (user == null)
             {
-                return NotFound();
+                return NotFound($"User with ID {id} not found.");
             }
             _mapper.Map(dto, user);
             await _unitOfWork.UserRepository.UpdateAsync(user);
@@ -55,12 +61,14 @@ namespace CryptoSimulator.Controllers
         }
 
         [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult> DeleteUser(int id)
         {
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(id);
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(new object[] { id }, null, null);
             if (user == null)
             {
-                return NotFound();
+                return NotFound($"User with ID {id} not found.");
             }
             await _unitOfWork.UserRepository.DeleteAsync(id);
             await _unitOfWork.SaveAsync();

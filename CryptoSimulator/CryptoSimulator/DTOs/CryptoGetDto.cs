@@ -16,4 +16,18 @@
     {
         public string Name { get; set; }
     }
+
+    public class  BuyCryptoDto
+    {
+        public int UserId { get; set; }
+        public int CryptoId { get; set; }
+        public decimal Amount { get; set; } 
+    }
+
+    public class SellCryptoDto
+    {
+        public int UserId { get; set; }
+        public int CryptoId { get; set; }
+        public decimal Amount { get; set; }
+    }
 }

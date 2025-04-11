@@ -6,14 +6,14 @@ namespace CryptoSimulator.Repositories
     public interface IRepository<T> where T : class
     {
         void Insert(T entity);
-        Task InsertAsync(T entity);
-        void Delete(int id);
-        Task DeleteAsync(int id);
-        IEnumerable<T> Get(string[]? includeProperties = null);
-        Task<IEnumerable<T>> GetAsync(string[]? includeProperties = null);
-        T? GetById(int id, string[]? includeReferences = null, string[]? includeCollections = null);
-        Task<T?> GetByIdAsync(int id, string[]? includeReferences = null, string[]? includeCollections = null);
+        void Delete(params object[] keyValues);
+        IEnumerable<T> Get(Func<T, bool> predicate, string[]? includeProperties = null);
+        T? GetById(object[] keyValues, string[]? includeProperties = null, string[]? includeCollections = null);
         void Update(T entity);
+        Task InsertAsync(T entity);
+        Task DeleteAsync(params object[] keyValues);
+        Task<IEnumerable<T>> GetAsync(Func<T, bool> predicate, string[]? includeProperties = null);
+        Task<T?> GetByIdAsync(object[] keyValues, string[]? includeProperties = null, string[]? includeCollections = null);
         Task UpdateAsync(T entity);
     }
 
@@ -24,53 +24,49 @@ namespace CryptoSimulator.Repositories
 
         public Repository(CryptoSimulationDbContext context)
         {
-            _context = context;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
             _dbSet = context.Set<T>();
         }
 
         public void Insert(T entity)
         {
             _dbSet.Add(entity);
-            _context.SaveChanges();
         }
 
         public async Task InsertAsync(T entity)
         {
             await _dbSet.AddAsync(entity);
-            await _context.SaveChangesAsync();
         }
 
-        public void Delete(int id)
+        public void Delete(params object[] keyValues)
         {
-            T? entity = _dbSet.Find(id);
+            T? entity = _dbSet.Find(keyValues);
             if (entity != null)
             {
                 _dbSet.Remove(entity);
             }
             else
             {
-                throw new ArgumentNullException(nameof(entity), "Entity not found");
+                throw new KeyNotFoundException($"Entity of type {typeof(T).Name} with the provided key values was not found.");
             }
-            _context.SaveChanges();
         }
 
-        public async Task DeleteAsync(int id)
+        public async Task DeleteAsync(params object[] keyValues)
         {
-            T? entity = await _dbSet.FindAsync(id);
+            T? entity = await _dbSet.FindAsync(keyValues);
             if (entity != null)
             {
                 _dbSet.Remove(entity);
             }
             else
             {
-                throw new ArgumentNullException(nameof(entity), "Entity not found");
+                throw new KeyNotFoundException($"Entity of type {typeof(T).Name} with the provided key values was not found.");
             }
-            await _context.SaveChangesAsync();
         }
 
-        public IEnumerable<T> Get(string[]? includeProperties = null)
+        public IEnumerable<T> Get(Func<T, bool> predicate, string[]? includeProperties = null)
         {
-            IQueryable<T> query = _dbSet;
+            IQueryable<T> query = _dbSet.Where(predicate).AsQueryable();
             if (includeProperties != null)
             {
                 foreach (var includeProperty in includeProperties)
@@ -81,9 +77,9 @@ namespace CryptoSimulator.Repositories
             return query.ToList();
         }
 
-        public async Task<IEnumerable<T>> GetAsync(string[]? includeProperties = null)
+        public async Task<IEnumerable<T>> GetAsync(Func<T, bool> predicate, string[]? includeProperties = null)
         {
-            IQueryable<T> query = _dbSet;
+            IQueryable<T> query = _dbSet.Where(predicate).AsQueryable();
             if (includeProperties != null)
             {
                 foreach (var includeProperty in includeProperties)
@@ -94,9 +90,9 @@ namespace CryptoSimulator.Repositories
             return await query.ToListAsync();
         }
 
-        public T? GetById(int id, string[]? includeReferences = null, string[]? includeCollections = null)
+        public T? GetById(object[] keyValues, string[]? includeReferences = null, string[]? includeCollections = null)
         {
-            T? entity = _dbSet.Find(id);
+            T? entity = _dbSet.Find(keyValues);
             if (entity == null)
             {
                 return null;
@@ -127,9 +123,9 @@ namespace CryptoSimulator.Repositories
             return entity;
         }
 
-        public async Task<T?> GetByIdAsync(int id, string[]? includeReferences = null, string[]? includeCollections = null)
+        public async Task<T?> GetByIdAsync(object[] keyValues, string[]? includeReferences = null, string[]? includeCollections = null)
         {
-            T? entity = await _dbSet.FindAsync(id);
+            T? entity = await _dbSet.FindAsync(keyValues);
             if (entity == null)
             {
                 return null;
@@ -172,13 +168,12 @@ namespace CryptoSimulator.Repositories
         public void Update(T entity)
         {
             _dbSet.Update(entity);
-            _context.SaveChanges();
         }
 
         public async Task UpdateAsync(T entity)
         {
             await Task.Run(() => _dbSet.Update(entity));
-            await _context.SaveChangesAsync();
+            await Task.CompletedTask;
         }
     }
 }

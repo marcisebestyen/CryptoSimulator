@@ -20,7 +20,7 @@ namespace CryptoSimulator.Data
                 .HasKey(c => c.Id);
 
             modelBuilder.Entity<CryptoLog>()
-                .HasKey(cl => cl.CryptoId);
+                .HasKey(cl => new { cl.CryptoId, cl.From });
 
             modelBuilder.Entity<MyCryptos>()
                 .HasKey(mc => new { mc.WalletId, mc.CryptoId });
@@ -94,7 +94,7 @@ namespace CryptoSimulator.Data
 
             modelBuilder.Entity<Transactions>()
                 .Property(t => t.ExchangeRate)
-                .HasPrecision(18, 8); 
+                .HasPrecision(18, 8);
 
             base.OnModelCreating(modelBuilder);
         }

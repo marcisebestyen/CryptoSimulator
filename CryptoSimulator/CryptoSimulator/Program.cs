@@ -13,9 +13,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-// Database context registration
+// Database context registration for home
 builder.Services.AddDbContext<CryptoSimulationDbContext>(options =>
-    options.UseSqlServer("Server=localhost;Database=CryptoSimDb;TrustServerCertificate=True;User Id=sa;Password=yourStrong(&)Password"));
+    options.UseSqlServer("Server=localhost;Database=CryptoDb;TrustServerCertificate=True;User Id=sa;Password=yourStrong(&)Pssword"));
+// Database context registration for test
+//builder.Services.AddDbContext<CryptoSimulationDbContext>(options =>
+//    options.UseSqlServer("Server=(local);Database=CryptoDb_E26Q3C;Trusted_Connection=True;TrustServerCertificate=True; "));
 // UnitOfWork registration
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddEndpointsApiExplorer();
