@@ -1,8 +1,9 @@
 ﻿using AutoMapper;
 using CryptoSimulator.DTOs;
 using CryptoSimulator.Repositories;
+using CryptoSimulator.Services;
 using Microsoft.AspNetCore.Mvc;
-using CryptoSimulator.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace CryptoSimulator.Controllers
 {
@@ -12,11 +13,13 @@ namespace CryptoSimulator.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IUserService _userService;
 
-        public UserController(IUnitOfWork unitOfWork, IMapper mapper)
+        public UserController(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _userService = userService;
         }
 
         [HttpGet("{id}")]
@@ -32,16 +35,58 @@ namespace CryptoSimulator.Controllers
             return Ok(_mapper.Map<UserGetDto>(user));
         }
 
-        [HttpPost]
+        [HttpPost("login")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserGetDto))]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<UserGetDto>> Login([FromBody] UserLoginDto loginDto)
+        {
+            var loginSuccessful = await _userService.LoginAsync(loginDto.Email, loginDto.Password);
+            if (!loginSuccessful)
+            {
+                return Unauthorized("Invalid email or password.");
+            }
+
+            var user = (await _unitOfWork.UserRepository.GetAsync(u => u.Email == loginDto.Email)).FirstOrDefault();
+            if (user == null)
+            {
+                return Unauthorized("An error occurred after login");
+            }
+
+            return Ok(_mapper.Map<UserGetDto>(user));
+        }
+
+        [HttpPost("register")]
         [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(UserGetDto))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<UserGetDto>> CreateUser(UserPostDto dto)
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<UserGetDto>> Register([FromBody] UserRegisterDto registerDto)
         {
-            var user = _mapper.Map<User>(dto);
-            await _unitOfWork.UserRepository.InsertAsync(user);
-            await _unitOfWork.SaveAsync();
-            var userGetDto = _mapper.Map<UserGetDto>(user);
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, userGetDto);
+            var result = await _userService.RegisterAsync(registerDto.Username, registerDto.Email, registerDto.Password);
+            if (!result.Succeeded)
+            {
+                return BadRequest(new { Errors = result.Errors });
+            }
+
+            try
+            {
+                await _unitOfWork.SaveAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "A database error occurred during the registration.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred during the registration.");
+            }
+
+            if (result.CreatedUser == null)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Registration completed but user data could not be retrieved.");
+            }
+            var userGetDto = _mapper.Map<UserGetDto>(result.CreatedUser);
+
+            return CreatedAtAction(nameof(GetUser), new { id = userGetDto.Id }, userGetDto);
         }
 
         [HttpPut("{id}")]

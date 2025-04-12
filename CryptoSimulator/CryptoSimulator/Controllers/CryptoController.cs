@@ -35,6 +35,15 @@ namespace CryptoSimulator.Controllers
             return Ok(_mapper.Map<CryptoGetDto>(user));
         }
 
+        [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<CryptoGetWithCurrentValueDto>))]
+        public async Task<ActionResult<IEnumerable<CryptoGetWithCurrentValueDto>>> GetAllCryptos()
+        {
+            var cryptosWithCurrentValue = await _cryptoService.GetAllWithCurrentValueAsync();
+            return Ok(cryptosWithCurrentValue);
+        }
+
+
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(CryptoGetDto))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -45,23 +54,6 @@ namespace CryptoSimulator.Controllers
             await _unitOfWork.SaveAsync();
             var cryptoController = _mapper.Map<CryptoGetDto>(crypto);
             return CreatedAtAction(nameof(GetCrypto), new { id = crypto.Id }, cryptoController);
-        }
-
-        [HttpPut("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CryptoGetDto))]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<CryptoGetDto>> UpdateCrypto(int id, [FromBody] CryptoPutDto dto)
-        {
-            var crypto = await _unitOfWork.CryptoRepository.GetByIdAsync(new object[] { id }, null, null);
-            if (crypto == null)
-            {
-                return NotFound($"Crypto with ID {id} not found.");
-            }
-            _mapper.Map(dto, crypto);
-            await _unitOfWork.CryptoRepository.UpdateAsync(crypto);
-            await _unitOfWork.SaveAsync();
-            return Ok(_mapper.Map<CryptoGetDto>(crypto));
         }
 
         [HttpDelete("{id}")]
@@ -77,32 +69,6 @@ namespace CryptoSimulator.Controllers
             await _unitOfWork.CryptoRepository.DeleteAsync(id);
             await _unitOfWork.SaveAsync();
             return NoContent();
-        }
-
-        [HttpPost("buy")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult> BuyCrypto([FromBody] BuyCryptoDto buyDto)
-        {
-            var result = await _cryptoService.BuyCrypto(buyDto.UserId, buyDto.CryptoId, buyDto.Amount);
-            if (result)
-            {
-                return Ok("Crypto purchased successfully");
-            }
-            return BadRequest("Transaction failed");
-        }
-
-        [HttpPost("sell")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult> SellCrypto([FromBody] SellCryptoDto sellDto)
-        {
-            var result = await _cryptoService.SellCrypto(sellDto.UserId, sellDto.CryptoId, sellDto.Amount);
-            if (result)
-            {
-                return Ok("Crypto sold successfully");
-            }
-            return BadRequest("Transaction failed");
         }
     }
 }

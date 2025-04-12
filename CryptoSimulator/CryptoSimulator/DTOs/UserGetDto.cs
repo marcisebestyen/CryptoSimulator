@@ -37,4 +37,23 @@ namespace CryptoSimulator.DTOs
         [Required]
         public string Password { get; set; }
     }
+
+    public class UserLoginDto
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+        [Required]
+        public string Password { get; set; }
+    }
+
+    public class UserRegisterDto
+    {
+        [Required]
+        public string Username { get; set; }
+        [Required]
+        public string Email { get; set; }
+        [Required]
+        public string Password { get; set; }
+    }
 }

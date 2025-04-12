@@ -1,5 +1,6 @@
 ﻿using CryptoSimulator.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace CryptoSimulator.Repositories
 {
@@ -7,13 +8,14 @@ namespace CryptoSimulator.Repositories
     {
         void Insert(T entity);
         void Delete(params object[] keyValues);
-        IEnumerable<T> Get(Func<T, bool> predicate, string[]? includeProperties = null);
+        IEnumerable<T> Get(Expression<Func<T, bool>> predicate, string[]? includeProperties = null);
         T? GetById(object[] keyValues, string[]? includeProperties = null, string[]? includeCollections = null);
         void Update(T entity);
         Task InsertAsync(T entity);
         Task DeleteAsync(params object[] keyValues);
-        Task<IEnumerable<T>> GetAsync(Func<T, bool> predicate, string[]? includeProperties = null);
+        Task<IEnumerable<T>> GetAsync(Expression<Func<T, bool>> predicate, string[]? includeProperties = null);
         Task<T?> GetByIdAsync(object[] keyValues, string[]? includeProperties = null, string[]? includeCollections = null);
+        Task<IEnumerable<T>> GetAllAsync(string[]? includeProperties = null);
         Task UpdateAsync(T entity);
     }
 
@@ -64,9 +66,10 @@ namespace CryptoSimulator.Repositories
             }
         }
 
-        public IEnumerable<T> Get(Func<T, bool> predicate, string[]? includeProperties = null)
+        public IEnumerable<T> Get(Expression<Func<T, bool>> predicate, string[]? includeProperties = null)
         {
-            IQueryable<T> query = _dbSet.Where(predicate).AsQueryable();
+            IQueryable<T> query = _dbSet;
+            query = query.Where(predicate);
             if (includeProperties != null)
             {
                 foreach (var includeProperty in includeProperties)
@@ -77,9 +80,10 @@ namespace CryptoSimulator.Repositories
             return query.ToList();
         }
 
-        public async Task<IEnumerable<T>> GetAsync(Func<T, bool> predicate, string[]? includeProperties = null)
+        public async Task<IEnumerable<T>> GetAsync(Expression<Func<T, bool>> predicate, string[]? includeProperties = null)
         {
-            IQueryable<T> query = _dbSet.Where(predicate).AsQueryable();
+            IQueryable<T> query = _dbSet;
+            query = query.Where(predicate);
             if (includeProperties != null)
             {
                 foreach (var includeProperty in includeProperties)
@@ -163,6 +167,19 @@ namespace CryptoSimulator.Repositories
             await Task.WhenAll(tasks);
 
             return entity;
+        }
+
+        public async Task<IEnumerable<T>> GetAllAsync(string[]? includeProperties = null)
+        {
+            IQueryable<T> query = _dbSet;
+            if (includeProperties != null)
+            {
+                foreach (var includeProperty in includeProperties)
+                {
+                    query = query.Include(includeProperty);
+                }
+            }
+            return await query.ToListAsync();
         }
 
         public void Update(T entity)

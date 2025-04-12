@@ -15,13 +15,13 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 // Database context registration for home
 builder.Services.AddDbContext<CryptoSimulationDbContext>(options =>
-    options.UseSqlServer("Server=localhost;Database=CryptoDb;TrustServerCertificate=True;User Id=sa;Password=yourStrong(&)Pssword"));
+    options.UseSqlServer("Server=localhost;Database=CryptoDb;TrustServerCertificate=True;User Id=sa;Password=yourStrong(&)Password"));
 // Database context registration for test
 //builder.Services.AddDbContext<CryptoSimulationDbContext>(options =>
 //    options.UseSqlServer("Server=(local);Database=CryptoDb_E26Q3C;Trusted_Connection=True;TrustServerCertificate=True; "));
 // UnitOfWork registration
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddEndpointsApiExplorer(); 
 // Swagger registration
 builder.Services.AddSwaggerGen(c =>
 {
@@ -48,6 +48,7 @@ builder.Services.AddScoped(typeof(IRepository<Wallet>), typeof(Repository<Wallet
 builder.Services.AddScoped<ICryptoService, CryptoService>();
 builder.Services.AddScoped<ICryptoLogService, CryptoLogService>();
 builder.Services.AddScoped<IMyCryptosService, MyCryptosService>();
+builder.Services.AddScoped<ITradeService, TradeService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
