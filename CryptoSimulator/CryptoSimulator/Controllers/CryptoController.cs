@@ -3,6 +3,7 @@ using CryptoSimulator.DTOs;
 using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CryptoSimulator.Controllers
@@ -43,6 +44,33 @@ namespace CryptoSimulator.Controllers
             return Ok(cryptosWithCurrentValue);
         }
 
+        [HttpPut("price/{cryptoId}")]
+        //[Authorize(Roles = "Admin")] // Just in case if we implement real login and authorization.
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult> UpdateCryptoPriceAsync(int cryptoId, [FromBody] ManualPriceUpdateDto dto)
+        {
+            DateTime updateTimestamp = DateTime.UtcNow;
+
+            bool success = await _cryptoService.UpdateCryptoPriceAsync(cryptoId, dto.NewPrice, updateTimestamp);
+            if (!success)
+            {
+                var cryptoExist = await _unitOfWork.CryptoRepository.GetByIdAsync(new object[] { cryptoId });
+                if (cryptoExist == null)
+                {
+                    return NotFound($"Crypto with ID {cryptoId} not found.");
+                }
+
+                return BadRequest("Failed to process price update. Check input or logs");
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            return NoContent();
+        }
 
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(CryptoGetDto))]
