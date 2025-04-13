@@ -6,6 +6,13 @@
         public string Name { get; set; }
     }
 
+    public class CryptoGetWithCurrentValueDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public decimal CurrentExchangeRate { get; set; }   
+    }
+
     public class CryptoPutDto
     {
         public int Id { get; set; }

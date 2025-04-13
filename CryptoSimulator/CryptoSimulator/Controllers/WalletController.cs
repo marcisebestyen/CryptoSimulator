@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using CryptoSimulator.DTOs;
-using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -32,17 +31,17 @@ namespace CryptoSimulator.Controllers
             return Ok(_mapper.Map<WalletGetDto>(wallet));
         }
 
-        [HttpPost]
-        [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(WalletGetDto))]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<WalletGetDto>> CreateWallet(WalletPostDto dto)
-        {
-            var wallet = _mapper.Map<Wallet>(dto);
-            await _unitOfWork.WalletRepository.InsertAsync(wallet);
-            await _unitOfWork.SaveAsync();
-            var walletDto = _mapper.Map<WalletGetDto>(wallet);
-            return CreatedAtAction(nameof(GetWallet), new { id = walletDto.Id }, walletDto);
-        }
+        //[HttpPost]
+        //[ProducesResponseType(StatusCodes.Status201Created, Type = typeof(WalletGetDto))]
+        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
+        //public async Task<ActionResult<WalletGetDto>> CreateTransaction(WalletGetDto dto)
+        //{
+        //    var wallet = _mapper.Map<Wallet>(dto);
+        //    await _unitOfWork.WalletRepository.InsertAsync(wallet);
+        //    await _unitOfWork.SaveAsync();
+        //    var walletDto = _mapper.Map<WalletGetDto>(wallet);
+        //    return CreatedAtAction(nameof(GetWallet), new { id = wallet.Id }, walletDto);
+        //}
 
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(WalletGetDto))]

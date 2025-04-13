@@ -1,162 +1,78 @@
 ﻿using AutoMapper;
+using CryptoSimulator.Data;
 using CryptoSimulator.DTOs;
 using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace CryptoSimulator.Services
 {
     public interface ICryptoService
     {
-        Task<bool> BuyCrypto(int userId, int cryptoId, decimal amount);
-        Task<bool> SellCrypto(int userId, int cryptoId, decimal amount);
+        Task<IEnumerable<CryptoGetWithCurrentValueDto>> GetAllWithCurrentValueAsync();
+        Task<bool> UpdateCryptoPriceAsync(int cryptoId, decimal newPrice, DateTime updateTimestamp);
     }
 
     public class CryptoService : ICryptoService
     {
+        private readonly CryptoSimulationDbContext _context;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private static readonly DateTime MaxDateTimeValue = new DateTime(9999, 12, 31, 23, 59, 59);
 
-        public CryptoService(IUnitOfWork unitOfWork, IMapper mapper)
+        public CryptoService(CryptoSimulationDbContext context, IUnitOfWork unitOfWork, IMapper mapper)
         {
+            _context = context;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
 
-        public async Task<bool> BuyCrypto(int userId, int cryptoId, decimal amount)
+        public async Task<IEnumerable<CryptoGetWithCurrentValueDto>> GetAllWithCurrentValueAsync()
         {
-            var wallet = _unitOfWork.WalletRepository
-                .Get(u => u.UserId == userId)
-                .FirstOrDefault();
-            if (wallet == null)
-            {
-                return false; 
-            }
+            var cryptoQuery = from crypto in _context.Cryptos
+                              join currentLog in _context.CryptoLogs on crypto.Id equals currentLog.CryptoId
+                              where currentLog.To == MaxDateTimeValue
+                              orderby crypto.Name
+                              select new CryptoGetWithCurrentValueDto
+                              {
+                                  Id = crypto.Id,
+                                  Name = crypto.Name,
+                                  CurrentExchangeRate = currentLog.CurrentValue
+                              };
 
-            var crypto = _unitOfWork.CryptoRepository
-                .Get(c => c.Id == cryptoId)
-                .FirstOrDefault();
-            if (crypto == null)
-            {
-                return false;
-            }
-
-            var cryptoLog = _unitOfWork.CryptoLogRepository
-                .Get(cl => cl.CryptoId == cryptoId)
-                .OrderByDescending(cl => cl.To)
-                .FirstOrDefault();
-            if (cryptoLog == null)
-            {
-                return false;
-            }
-
-            decimal totalPrice = amount * cryptoLog.CurrentValue;
-
-            if (wallet.Balance < totalPrice)
-            {
-                return false;
-            }
-
-            wallet.Balance -= totalPrice;
-            await _unitOfWork.WalletRepository.UpdateAsync(wallet);
-
-            var transactionPostDto = new TransactionsPostDto
-            {
-                WalletId = wallet.Id,
-                CryptoId = crypto.Id,
-                Amount = amount,
-                ExchangeRate = cryptoLog.CurrentValue,
-                IsPurchase = true
-            };
-            var transaction = _mapper.Map<Transactions>(transactionPostDto);
-            await _unitOfWork.TransactionRepository.InsertAsync(transaction);
-
-
-            var myCrypto = _unitOfWork.MyCryptosRepository
-                .Get(mc => mc.CryptoId == cryptoId && mc.WalletId == wallet.Id)
-                .FirstOrDefault();
-            if (myCrypto == null)
-            {
-                var myCryptoPostDto = new MyCryptosDto
-                {
-                    WalletId = wallet.Id,
-                    CryptoId = crypto.Id,
-                    Amount = amount
-                };
-                myCrypto = _mapper.Map<MyCryptos>(myCryptoPostDto);
-                await _unitOfWork.MyCryptosRepository.InsertAsync(myCrypto);
-            }
-            else
-            {
-                myCrypto.Amount += amount;
-                await _unitOfWork.MyCryptosRepository.UpdateAsync(myCrypto);
-            }
-
-            await _unitOfWork.SaveAsync();
-            return true;
+            var results = await cryptoQuery.ToListAsync();
+            return results;
         }
 
-        public async Task<bool> SellCrypto(int userId, int cryptoId, decimal amount)
+        public async Task<bool> UpdateCryptoPriceAsync(int cryptoId, decimal newPrice, DateTime updateTimestamp)
         {
-            var wallet = _unitOfWork.WalletRepository
-                .Get(w => w.UserId == userId)
-                .FirstOrDefault();
-            if (wallet == null)
+            if (updateTimestamp.Kind != DateTimeKind.Utc)
             {
-                return false;
+                updateTimestamp = updateTimestamp.ToUniversalTime();
             }
 
-            var crypto = _unitOfWork.CryptoRepository
-                .Get(c => c.Id == cryptoId)
-                .FirstOrDefault();
-            if (crypto == null)
+            var previousLog = (await _unitOfWork.CryptoLogRepository.GetAsync(cl => cl.CryptoId == cryptoId && cl.To == MaxDateTimeValue, null)).FirstOrDefault();
+
+            if (previousLog != null)
             {
-                return false;
+                if (updateTimestamp < previousLog.From)
+                {
+                    Console.WriteLine($"Error: Update timestamp {updateTimestamp} is earlier than previous log's From time {previousLog.From} for CryptoId {cryptoId}.");
+                    return false; 
+                }
+                previousLog.To = updateTimestamp;
+                await _unitOfWork.CryptoLogRepository.UpdateAsync(previousLog);
             }
 
-            var cryptoLog = _unitOfWork.CryptoLogRepository
-                .Get(cl => cl.CryptoId == cryptoId)
-                .OrderByDescending(cl => cl.To)
-                .FirstOrDefault();
-            if (cryptoLog == null)
+            var newLogEntry = new CryptoLog
             {
-                return false;
-            }
-
-            var myCrypto = _unitOfWork.MyCryptosRepository
-                .Get(mc => mc.CryptoId == cryptoId && mc.WalletId == wallet.Id)
-                .FirstOrDefault();
-            if (myCrypto == null || myCrypto.Amount < amount)
-            {
-                return false;
-            }
-
-            decimal totalPrice = amount * cryptoLog.CurrentValue;
-
-            wallet.Balance += totalPrice;
-            await _unitOfWork.WalletRepository.UpdateAsync(wallet);
-
-            var transactionPostDto = new TransactionsPostDto
-            {
-                WalletId = wallet.Id,
-                CryptoId = crypto.Id,
-                Amount = amount,
-                ExchangeRate = cryptoLog.CurrentValue,
-                IsPurchase = false
+                CryptoId = cryptoId,
+                CurrentValue = newPrice,
+                From = updateTimestamp,
+                To = MaxDateTimeValue
             };
-            var transaction = _mapper.Map<Transactions>(transactionPostDto);
-            await _unitOfWork.TransactionRepository.InsertAsync(transaction);
+            await _unitOfWork.CryptoLogRepository.InsertAsync(newLogEntry);
 
-            myCrypto.Amount -= amount;
-            if (myCrypto.Amount == 0)
-            {
-                await _unitOfWork.MyCryptosRepository.DeleteAsync(myCrypto.CryptoId);
-            }
-            else
-            {
-                await _unitOfWork.MyCryptosRepository.UpdateAsync(myCrypto);
-            }
-
-            await _unitOfWork.SaveAsync();
             return true;
         }
     }
