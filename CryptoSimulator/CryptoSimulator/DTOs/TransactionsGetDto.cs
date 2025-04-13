@@ -14,7 +14,6 @@
 
     public class TransactionsPutDto
     {
-        public int Id { get; set; }
         public int WalletId { get; set; }
         public int CryptoId { get; set; }
         public decimal Amount { get; set; }

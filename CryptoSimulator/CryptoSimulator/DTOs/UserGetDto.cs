@@ -15,7 +15,6 @@ namespace CryptoSimulator.DTOs
 
     public class UserPutDto
     {
-        public int Id { get; set; }
         public Role Role { get; set; }
         public string Username { get; set; }
         public string FirstName { get; set; }
