@@ -9,6 +9,7 @@
         public decimal ExchangeRate { get; set; }
         public DateTime Date { get; set; }
         public bool IsPurchase { get; set; }
+        public string TransactionType => IsPurchase ? "Purchase" : "Sale";
     }
 
     public class TransactionsPutDto

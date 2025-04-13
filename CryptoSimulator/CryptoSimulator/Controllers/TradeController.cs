@@ -57,5 +57,31 @@ namespace CryptoSimulator.Controllers
             }
             return Ok(portfolio);
         }
+
+        [HttpGet("portfolio/{userId}/profitloss/details")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<CryptoProfitLossDto>))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<IEnumerable<CryptoProfitLossDto>>> GetDetailedProfitLoss(int userId)
+        {
+            var result = await _tradeService.GetDetailedProfitLossAsync(userId);
+            if (result == null)
+            {
+                return NotFound($"User or Wallet not found for User ID {userId}.");
+            }
+            return Ok(result);
+        }
+
+        [HttpGet("portfolio/{userId}/profitloss/summary")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PortfolioProfitLossDto))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<PortfolioProfitLossDto>> GetPortfolioProfitLossSummary(int userId)
+        {
+            var result = await _tradeService.GetPortfolioProfitLossAsync(userId);
+            if (result == null)
+            {
+                return NotFound($"User or Wallet not found for User ID {userId}.");
+            }
+            return Ok(result);
+        }
     }
 }
