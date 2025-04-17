@@ -11,8 +11,8 @@ namespace CryptoSimulator.Services
         Task<bool> BuyCrypto(int userId, int cryptoId, decimal amount);
         Task<bool> SellCrypto(int userId, int cryptoId, decimal amount);
         Task<PortfolioDto?> GetPortfolio(int userId);
-        Task<IEnumerable<CryptoProfitLossDto>?> GetDetailedProfitLossAsync(int userId);
-        Task<PortfolioProfitLossDto?> GetPortfolioProfitLossAsync(int userId);
+        Task<IEnumerable<CryptoProfitLossDto>?> GetDetailedProfitLoss(int userId);
+        Task<PortfolioProfitLossDto?> GetPortfolioProfitLoss(int userId);
     }
 
     public class TradeService : ITradeService
@@ -224,7 +224,7 @@ namespace CryptoSimulator.Services
             return portfolio;
         }
 
-        public async Task<IEnumerable<CryptoProfitLossDto>?> GetDetailedProfitLossAsync(int userId)
+        public async Task<IEnumerable<CryptoProfitLossDto>?> GetDetailedProfitLoss(int userId)
         {
             var wallet = (await _unitOfWork.WalletRepository.GetAsync(w => w.UserId == userId)).FirstOrDefault();
             if (wallet == null)
@@ -275,12 +275,12 @@ namespace CryptoSimulator.Services
             return results;
         }
 
-        public async Task<PortfolioProfitLossDto?> GetPortfolioProfitLossAsync(int userId)
+        public async Task<PortfolioProfitLossDto?> GetPortfolioProfitLoss(int userId)
         {
-            var detailedProfitLoss = await GetDetailedProfitLossAsync(userId);
+            var detailedProfitLoss = await GetDetailedProfitLoss(userId);
             if (detailedProfitLoss == null)
             {
-                //Console.WriteLine($"DEBUG: GetDetailedProfitLossAsync returned null for UserId: {userId}");
+                //Console.WriteLine($"DEBUG: GetDetailedProfitLoss returned null for UserId: {userId}");
                 return null;
             }
 
@@ -288,7 +288,7 @@ namespace CryptoSimulator.Services
 
             if (!detailList.Any())
             {
-                //Console.WriteLine($"DEBUG: GetDetailedProfitLossAsync returned null for UserId: {userId}");
+                //Console.WriteLine($"DEBUG: GetDetailedProfitLoss returned null for UserId: {userId}");
                 return new PortfolioProfitLossDto { UserId = userId };
             }
 

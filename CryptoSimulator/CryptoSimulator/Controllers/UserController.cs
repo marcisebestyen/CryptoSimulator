@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Azure.Core;
 using CryptoSimulator.DTOs;
 using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;
@@ -87,6 +88,28 @@ namespace CryptoSimulator.Controllers
             var userGetDto = _mapper.Map<UserGetDto>(result.CreatedUser);
 
             return CreatedAtAction(nameof(GetUser), new { id = userGetDto.Id }, userGetDto);
+        }
+
+        [HttpPost("change-password")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)] 
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult> ChangePassword(int userId, [FromBody] UserChangePasswordDto changePasswordDto)
+        {
+            var changeResult = await _userService.ChangePasswordAsync(userId, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
+            if (!changeResult.Succeeded)
+            {
+                foreach (var error in changeResult.Errors)
+                {
+                    if (error.Contains("User not found", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return NotFound(error);
+                    }
+                    ModelState.AddModelError(string.Empty, error);
+                }
+                return BadRequest(ModelState);
+            }
+            return NoContent();
         }
 
         [HttpPut("{id}")]

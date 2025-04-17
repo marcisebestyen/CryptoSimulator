@@ -63,7 +63,7 @@ namespace CryptoSimulator.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<IEnumerable<CryptoProfitLossDto>>> GetDetailedProfitLoss(int userId)
         {
-            var result = await _tradeService.GetDetailedProfitLossAsync(userId);
+            var result = await _tradeService.GetDetailedProfitLoss(userId);
             if (result == null)
             {
                 return NotFound($"User or Wallet not found for User ID {userId}.");
@@ -76,7 +76,7 @@ namespace CryptoSimulator.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<PortfolioProfitLossDto>> GetPortfolioProfitLossSummary(int userId)
         {
-            var result = await _tradeService.GetPortfolioProfitLossAsync(userId);
+            var result = await _tradeService.GetPortfolioProfitLoss(userId);
             if (result == null)
             {
                 return NotFound($"User or Wallet not found for User ID {userId}.");
