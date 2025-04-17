@@ -8,7 +8,7 @@ namespace CryptoSimulator.Services
     {
         Task<bool> LoginAsync(string email, string password);
         Task<RegistrationResult> RegisterAsync(string username, string email, string password);
-        //Task<PasswordChangeResult> ChangePasswordAsync(int userId, string currentPassword, string newPassword);
+        Task<PasswordChangeResult> ChangePasswordAsync(int userId, string currentPassword, string newPassword);
     }
 
     public class UserService : IUserService
@@ -114,57 +114,57 @@ namespace CryptoSimulator.Services
             return RegistrationResult.Success(newUser);
         }
 
-        //public async Task<PasswordChangeResult> ChangePasswordAsync(int userId, string currentPassword, string newPassword)
-        //{
-        //    if (string.IsNullOrWhiteSpace(currentPassword) || string.IsNullOrWhiteSpace(newPassword))
-        //    {
-        //        return PasswordChangeResult.Failure("Current and new passwords are required.");
-        //    }
+        public async Task<PasswordChangeResult> ChangePasswordAsync(int userId, string currentPassword, string newPassword)
+        {
+            if (string.IsNullOrWhiteSpace(currentPassword) || string.IsNullOrWhiteSpace(newPassword))
+            {
+                return PasswordChangeResult.Failure("Current and new passwords are required.");
+            }
 
-        //    if (currentPassword == newPassword)
-        //    {
-        //        return PasswordChangeResult.Failure("New password cannot be the same as the current password.");
-        //    }
+            if (currentPassword == newPassword)
+            {
+                return PasswordChangeResult.Failure("New password cannot be the same as the current password.");
+            }
 
-        //    var user = await _unitOfWork.UserRepository.GetByIdAsync(new object[] { userId });
-        //    if (user == null)
-        //    {
-        //        return PasswordChangeResult.Failure("User not found.");
-        //    }
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(new object[] { userId });
+            if (user == null)
+            {
+                return PasswordChangeResult.Failure("User not found.");
+            }
 
-        //    if (!VerifyPasswordPlaceholder(user.Password, currentPassword))
-        //    {
-        //        return PasswordChangeResult.Failure("Incorrect current password.");
-        //    }
+            if (!VerifyPasswordPlaceholder(user.Password, currentPassword))
+            {
+                return PasswordChangeResult.Failure("Incorrect current password.");
+            }
 
-        //    string newPasswordHash;
-        //    try
-        //    {
-        //        newPasswordHash = HashedPasswordPlaceholder(newPassword);
-        //        if (string.IsNullOrWhiteSpace(newPasswordHash))
-        //        {
-        //            return PasswordChangeResult.Failure("An error occurred while hashing the new password.");
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return PasswordChangeResult.Failure("An error occurred while hashing the new password.");
-        //    }
+            string newPasswordHash;
+            try
+            {
+                newPasswordHash = HashedPasswordPlaceholder(newPassword);
+                if (string.IsNullOrWhiteSpace(newPasswordHash))
+                {
+                    return PasswordChangeResult.Failure("An error occurred while hashing the new password.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return PasswordChangeResult.Failure("An error occurred while hashing the new password.");
+            }
 
-        //    user.Password = newPasswordHash;
+            user.Password = newPasswordHash;
 
-        //    await _unitOfWork.UserRepository.UpdateAsync(user);
-        //    try
-        //    {
-        //        await _unitOfWork.SaveAsync();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return PasswordChangeResult.Failure("An error occurred while saving the new password.");    
-        //    }
+            await _unitOfWork.UserRepository.UpdateAsync(user);
+            try
+            {
+                await _unitOfWork.SaveAsync();
+            }
+            catch (Exception ex)
+            {
+                return PasswordChangeResult.Failure("An error occurred while saving the new password.");
+            }
 
-        //    return PasswordChangeResult.Success();
-        //}
+            return PasswordChangeResult.Success();
+        }
 
         private bool IsValidEmail(string email)
         {

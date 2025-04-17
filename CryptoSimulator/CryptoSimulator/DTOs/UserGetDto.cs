@@ -56,14 +56,14 @@ namespace CryptoSimulator.DTOs
         public string Password { get; set; }
     }
 
-    //public class UserChangePasswordDto
-    //{
-    //    [Required]
-    //    public string CurrentPassword { get; set; }
-    //    [Required]
-    //    public string NewPassword { get; set; }
-    //    [Required]
-    //    [Compare("NewPassword", ErrorMessage = "The new password and confirmation password do not match.")]
-    //    public string ConfirmedNewPassword { get; set; }
-    //}
+    public class UserChangePasswordDto
+    {
+        [Required]
+        public string CurrentPassword { get; set; }
+        [Required]
+        public string NewPassword { get; set; }
+        [Required]
+        [Compare("NewPassword", ErrorMessage = "The new password and confirmation password do not match.")]
+        public string ConfirmedNewPassword { get; set; }
+    }
 }
