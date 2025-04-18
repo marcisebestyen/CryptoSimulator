@@ -12,6 +12,9 @@ namespace CryptoSimulator.Services
             CreateMap<User, UserGetDto>();
             CreateMap<UserPutDto, User>();
             CreateMap<UserPostDto, User>();
+            CreateMap<UserPutDto, User>()
+                .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null &&
+                !(srcMember is string && string.IsNullOrEmpty((string)srcMember))));
 
             // Wallet mappings
             CreateMap<Wallet, WalletGetDto>();

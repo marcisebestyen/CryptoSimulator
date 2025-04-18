@@ -10,7 +10,6 @@
     public class WalletPutDto
     {
         public decimal Balance { get; set; }
-        public int UserId { get; set; }
     }
 
     public class WalletPostDto
