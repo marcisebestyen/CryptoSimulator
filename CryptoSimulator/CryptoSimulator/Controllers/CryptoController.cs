@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CryptoSimulator.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("crypto")]
     public class CryptoController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;

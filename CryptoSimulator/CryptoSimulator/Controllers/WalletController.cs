@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CryptoSimulator.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/wallet")]
     public class WalletController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
