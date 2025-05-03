@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CryptoSimulator.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/users")]
     public class UserController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;

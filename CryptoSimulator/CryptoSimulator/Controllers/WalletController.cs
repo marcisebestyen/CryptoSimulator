@@ -1,35 +1,53 @@
 ﻿using AutoMapper;
 using CryptoSimulator.DTOs;
 using CryptoSimulator.Repositories;
+using CryptoSimulator.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CryptoSimulator.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/wallet")]
     public class WalletController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IWalletService _walletService;
 
-        public WalletController(IUnitOfWork unitOfWork, IMapper mapper)
+        public WalletController(IUnitOfWork unitOfWork, IMapper mapper, IWalletService walletService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _walletService = walletService;
         }
 
-        [HttpGet("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(WalletGetDto))]
+        [HttpGet("{id}")] 
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserWalletDetailsDto))]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<WalletGetDto>> GetWallet(int id)
+        public async Task<ActionResult<UserWalletDetailsDto>> GetUserWallet(int id) 
         {
-            var wallet = await _unitOfWork.WalletRepository.GetByIdAsync(new object[] { id }, null, null);
-            if (wallet == null)
+            var walletDetails = await _walletService.GetUserWalletDetailsAsync(id);
+
+            if (walletDetails == null)
             {
-                return NotFound($"Wallet with ID {id} not found.");
+                return NotFound($"Wallet details for User ID {id} not found.");
             }
-            return Ok(_mapper.Map<WalletGetDto>(wallet));
+
+            return Ok(walletDetails);
         }
+
+        //[HttpGet("{id}")]
+        //[ProducesResponseType(StatusCodes.Status200OK, Type = typeof(WalletGetDto))]
+        //[ProducesResponseType(StatusCodes.Status404NotFound)]
+        //public async Task<ActionResult<WalletGetDto>> GetWallet(int id)
+        //{
+        //    var wallet = await _unitOfWork.WalletRepository.GetByIdAsync(new object[] { id }, null, null);
+        //    if (wallet == null)
+        //    {
+        //        return NotFound($"Wallet with ID {id} not found.");
+        //    }
+        //    return Ok(_mapper.Map<WalletGetDto>(wallet));
+        //}
 
         //[HttpPost]
         //[ProducesResponseType(StatusCodes.Status201Created, Type = typeof(WalletGetDto))]

@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CryptoSimulator.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/transactions")]
     public class TransactionController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;

@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CryptoSimulator.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("crypto")]
     public class CryptoController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -97,6 +97,21 @@ namespace CryptoSimulator.Controllers
             await _unitOfWork.CryptoRepository.DeleteAsync(id);
             await _unitOfWork.SaveAsync();
             return NoContent();
+        }
+
+        [HttpGet("price/history/{cryptoId}")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<CryptoPriceHistoryDto>))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<IEnumerable<CryptoPriceHistoryDto>>> GetCryptoPriceHistory(int cryptoId)
+        {
+            var cryptoExist = await _unitOfWork.CryptoRepository.GetByIdAsync(new object[] { cryptoId });
+            if (cryptoExist == null)
+            {
+                return NotFound($"Crypto with ID {cryptoId} not found.");
+            }
+
+            var history = await _cryptoService.GetCryptoPriceHistoryAsync(cryptoId);
+            return Ok(history);
         }
     }
 }

@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CryptoSimulator.Controllers
 {
+    [ApiController]
+    [Route("api/trade")]
     public class TradeController : ControllerBase
     {
         IUnitOfWork _unitOfWork;
