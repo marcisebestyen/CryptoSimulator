@@ -36,4 +36,18 @@
         public int CryptoId { get; set; }
         public decimal Amount { get; set; }
     }
+
+    public class CryptoPriceHistoryDto
+    {
+        public decimal Value { get; set; }
+        public DateTime From { get; set; }
+        public DateTime To { get; set; }
+    }
+
+    public class OwnedCryptoDto
+    {
+        public int CryptoId { get; set; }
+        public string CryptoName { get; set; }
+        public decimal Amount { get; set; }
+    }
 }

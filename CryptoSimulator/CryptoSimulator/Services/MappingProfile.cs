@@ -33,6 +33,10 @@ namespace CryptoSimulator.Services
             // CryptoLog mappings
             CreateMap<CryptoLog, CryptoLogDto>();
             CreateMap<CryptoLogDto, CryptoLog>();
+            CreateMap<CryptoLog, CryptoPriceHistoryDto>()
+                .ForMember(dest => dest.Value, opt => opt.MapFrom(src => src.CurrentValue))
+                .ForMember(dest => dest.From, opt => opt.MapFrom(src => src.From))
+                .ForMember(dest => dest.To, opt => opt.MapFrom(src => src.To));
 
             // Crypto mappings
             CreateMap<Crypto, CryptoGetDto>();

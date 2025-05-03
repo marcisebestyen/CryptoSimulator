@@ -11,6 +11,7 @@ namespace CryptoSimulator.Services
     {
         Task<IEnumerable<CryptoGetWithCurrentValueDto>> GetAllWithCurrentValueAsync();
         Task<bool> UpdateCryptoPriceAsync(int cryptoId, decimal newPrice, DateTime updateTimestamp);
+        Task<IEnumerable<CryptoPriceHistoryDto>> GetCryptoPriceHistoryAsync(int cryptoId);
     }
 
     public class CryptoService : ICryptoService
@@ -74,6 +75,15 @@ namespace CryptoSimulator.Services
             await _unitOfWork.CryptoLogRepository.InsertAsync(newLogEntry);
 
             return true;
+        }
+
+        public async Task<IEnumerable<CryptoPriceHistoryDto>> GetCryptoPriceHistoryAsync(int cryptoId)
+        {
+            var historyLogs = await _unitOfWork.CryptoLogRepository.GetAsync(cl => cl.CryptoId == cryptoId);
+            var orderedHistoryLogs = historyLogs.OrderBy(cl => cl.From);
+
+            var historyDtos = _mapper.Map<IEnumerable<CryptoPriceHistoryDto>>(orderedHistoryLogs);
+            return historyDtos;
         }
     }
 }
