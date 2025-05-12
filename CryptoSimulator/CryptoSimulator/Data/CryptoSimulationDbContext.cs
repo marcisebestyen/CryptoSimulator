@@ -13,6 +13,7 @@ namespace CryptoSimulator.Data
         public DbSet<Transactions> Transactions { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<Wallet> Wallets { get; set; }
+        public DbSet<PriceAlert> PriceAlerts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -95,6 +96,21 @@ namespace CryptoSimulator.Data
             modelBuilder.Entity<Transactions>()
                 .Property(t => t.ExchangeRate)
                 .HasPrecision(18, 8);
+
+            modelBuilder.Entity<PriceAlert>()
+                .HasKey(pa => pa.Id);
+
+            modelBuilder.Entity<PriceAlert>()
+                .HasOne(pa => pa.User)
+                .WithMany()
+                .HasForeignKey(pa => pa.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PriceAlert>()
+                .HasOne(pa => pa.Crypto)
+                .WithMany()
+                .HasForeignKey(pa => pa.CryptoId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             base.OnModelCreating(modelBuilder);
         }

@@ -203,6 +203,35 @@ INSERT INTO Transactions (WalletId, CryptoId, Amount, ExchangeRate, Date, IsPurc
 
 PRINT 'Transactions populated.';
 
+PRINT 'Populating PriceAlerts...';
+INSERT INTO PriceAlerts (UserId, CryptoId, TargetPrice, AlertType, IsActive, HasBeenNotifiedForCurrentState, CreatedAt, LastTriggeredAt) VALUES
+-- Alert 1: Bob (ID 2) figyel, ha Bitcoin (ID 1) ára 69000.00 alá esik. Jelenlegi BTC ár: 69550.25. (Még nem triggerelődött)
+(2, 1, 69000.00000000, 0, 1, 0, '2025-04-11 12:00:00', NULL),
+
+-- Alert 2: Bob (ID 2) figyel, ha Dogecoin (ID 2) ára 0.20 fölé megy. Jelenlegi DOGE ár: 0.16. (Még nem triggerelődött)
+(2, 2, 0.20000000, 1, 1, 0, '2025-04-11 12:05:00', NULL),
+
+-- Alert 3: Charlie (ID 3) figyelt, ha Ethereum (ID 3) ára 3590.00 alá esik. Jelenlegi ETH ár: 3580.75.
+-- Tegyük fel, hogy az ár 3595-ről esett 3580.75-re '2025-04-10 16:45:00'-kor, így ez triggerelődött.
+-- Mivel az ár jelenleg a célár alatt van, a HasBeenNotifiedForCurrentState = 1.
+(3, 3, 3590.00000000, 0, 1, 1, '2025-04-10 14:00:00', '2025-04-10 16:45:00'),
+
+-- Alert 4: Diana (ID 4) figyelt, ha Solana (ID 8) ára 192.00 fölé megy. Jelenlegi SOL ár: 195.25.
+-- Ez triggerelődött, amikor az ár 190.50-ről 195.25-re váltott '2025-04-10 20:15:00'-kor.
+-- Diana később inaktiválta a riasztást (IsActive = 0), de a történetben szerepelnie kell.
+-- Mivel az ár jelenleg a célár felett van, a HasBeenNotifiedForCurrentState = 1.
+(4, 8, 192.00000000, 1, 0, 1, '2025-04-10 10:00:00', '2025-04-10 20:15:00'),
+
+-- Alert 5: Bob (ID 2) figyel, ha Bitcoin (ID 1) ára 75000.00 fölé megy. (Magas célár, még nem triggerelődött)
+(2, 1, 75000.00000000, 1, 1, 0, '2025-04-11 12:10:00', NULL),
+
+-- Alert 6: Charlie (ID 3) figyelt, ha Tether (ID 4) ára 0.50 alá esik. Jelenlegi USDT ár: 1.05.
+-- A CryptoLogs-ban van egy anomália: Tether ára 0.09 volt '2025-04-10 08:00:00' és '2025-04-11 10:00:00' között.
+-- Ez a riasztás akkor triggerelődött ('2025-04-10 08:00:00').
+-- Mivel az ár (1.05) most már a célár (0.50) felett van, a HasBeenNotifiedForCurrentState = 0, hogy újra tudjon jelezni, ha ismét esik.
+(3, 4, 0.50000000, 0, 1, 0, '2025-04-09 10:00:00', '2025-04-10 08:00:00');
+PRINT 'PriceAlerts populated.';
+
 -- =============================================
 -- End of Script
 -- =============================================

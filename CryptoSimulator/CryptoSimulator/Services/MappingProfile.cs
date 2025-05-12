@@ -42,6 +42,15 @@ namespace CryptoSimulator.Services
             CreateMap<Crypto, CryptoGetDto>();
             CreateMap<CryptoPutDto, Crypto>();
             CreateMap<CryptoPostDto, Crypto>();
+
+            // Alerts mappings 
+            CreateMap<PriceAlertCreateDto, PriceAlert>(); 
+            CreateMap<PriceAlert, PriceAlertGetDto>()
+                .ForMember(dest => dest.CryptoName, opt => opt.MapFrom(src => src.Crypto != null ? src.Crypto.Name : null));
+            CreateMap<PriceAlert, PriceAlertGetDto>()
+                .ForMember(dest => dest.CryptoName, opt => opt.MapFrom(src => src.Crypto != null ? src.Crypto.Name : null));
+            CreateMap<PriceAlert, PriceAlertGetDto>()
+                .ForMember(dest => dest.CryptoName, opt => opt.MapFrom(src => src.Crypto != null ? src.Crypto.Name : null));
         }
     }
 }

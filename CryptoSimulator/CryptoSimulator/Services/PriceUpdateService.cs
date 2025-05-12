@@ -25,30 +25,46 @@ namespace CryptoSimulator.Services
             {
                 try
                 {
-                    await UpdatePrices(stoppingToken);
+                    await UpdatePricesAndCheckAlertsAsync(stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("PriceUpdateService stopping due to cancellation.");
+                    break;
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "An error occurred while updating prices.");
                 }
 
-                await Task.Delay(_updateInterval, stoppingToken);
+                try
+                {
+                    await Task.Delay(_updateInterval, stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("PriceUpdateService delay was canceled. Stopping service.");
+                    break;
+                }
             }
 
             _logger.LogInformation("PriceUpdateService is stopping.");
         }
 
-        private async Task UpdatePrices(CancellationToken stoppingToken)
+        private async Task UpdatePricesAndCheckAlertsAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Running price update task at {time}", DateTime.Now);
+            _logger.LogInformation("Running price update and alert checking task at {time}", DateTimeOffset.Now);
 
             using (var scope = _serviceProvider.CreateScope())
             {
                 var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
                 var cryptoService = scope.ServiceProvider.GetRequiredService<ICryptoService>();
-                var cryptoRepository = unitOfWork.CryptoRepository;
+                var priceAlertService = scope.ServiceProvider.GetRequiredService<IPriceAlertService>();
 
-                var cryptos = await cryptoRepository.GetAllAsync();
+                var cryptos = await unitOfWork.CryptoRepository.GetAllAsync(); 
+
+                //var cryptoRepository = unitOfWork.CryptoRepository;
+                //var cryptos = await cryptoRepository.GetAllAsync();
 
                 foreach(var crypto in cryptos)
                 {
@@ -59,14 +75,17 @@ namespace CryptoSimulator.Services
 
                     try
                     {
+                        decimal currentPriceBeforeUpdate = await GetCurrentPrice(unitOfWork, crypto.Id);
                         decimal newPrice = GenerateNewPriceExample(crypto.Id, await GetCurrentPrice(unitOfWork, crypto.Id));
                         DateTime updateTimestamp = DateTime.UtcNow;
                         bool processed = await cryptoService.UpdateCryptoPriceAsync(crypto.Id, newPrice, updateTimestamp);
 
                         if (processed)
                         {
-                            _logger.LogDebug("Processed price update for CryptoId {cryptoId} with new price {newPrice} at {timestamp}", crypto.Id, newPrice, updateTimestamp);
                             await unitOfWork.SaveAsync();
+                            _logger.LogDebug("Processed price update for CryptoId {cryptoId} with new price {newPrice} at {timestamp}", crypto.Id, newPrice, updateTimestamp);
+                            _logger.LogDebug("Checking alerts for CryptoId {CryptoId} with new price {NewPrice}", crypto.Id, newPrice);
+                            await priceAlertService.CheckAlertsAsync(crypto.Id, newPrice);
                         }
                         else
                         {

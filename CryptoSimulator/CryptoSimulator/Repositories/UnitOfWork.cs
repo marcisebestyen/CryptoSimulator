@@ -11,6 +11,7 @@ namespace CryptoSimulator.Repositories
         IRepository<Transactions> TransactionRepository { get; }
         IRepository<User> UserRepository { get; }
         IRepository<Wallet> WalletRepository { get; }
+        IRepository<PriceAlert> PriceAlertRepository { get; }
 
         void Save();
         Task SaveAsync();
@@ -29,6 +30,7 @@ namespace CryptoSimulator.Repositories
             TransactionRepository = new Repository<Transactions>(_context);
             UserRepository = new Repository<User>(_context);
             WalletRepository = new Repository<Wallet>(_context);
+            PriceAlertRepository = new Repository<PriceAlert>(_context);
         }
 
         public IRepository<Crypto> CryptoRepository { get; set; }
@@ -37,6 +39,7 @@ namespace CryptoSimulator.Repositories
         public IRepository<Transactions> TransactionRepository { get; set; }
         public IRepository<User> UserRepository { get; set; }
         public IRepository<Wallet> WalletRepository { get; set; }
+        public IRepository<PriceAlert> PriceAlertRepository { get; set; }
 
         public void Save()
         {

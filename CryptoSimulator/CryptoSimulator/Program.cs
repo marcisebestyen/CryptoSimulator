@@ -49,6 +49,7 @@ builder.Services.AddScoped<ICryptoService, CryptoService>();
 builder.Services.AddScoped<ICryptoLogService, CryptoLogService>();
 builder.Services.AddScoped<IMyCryptosService, MyCryptosService>();
 builder.Services.AddHostedService<PriceUpdateService>();
+builder.Services.AddScoped<IPriceAlertService, PriceAlertService>();
 builder.Services.AddScoped<ITradeService, TradeService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IUserService, UserService>();
