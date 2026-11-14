@@ -183,4 +183,55 @@ public class CryptoControllerTests
         Assert.IsType<NotFoundObjectResult>(result.Result);
         await _service.DidNotReceive().GetCryptoPriceHistoryAsync(Arg.Any<int>());
     }
+
+    [Fact]
+    public async Task Should_ReturnConflictAndNotInsert_When_CreateNameTaken()
+    {
+        _service.IsNameTakenAsync("BTC").Returns(true);
+
+        var result = await _sut.CreateCrypto(new CryptoPostDto { Name = "BTC" });
+
+        Assert.IsType<ConflictObjectResult>(result.Result);
+        await _cryptos.DidNotReceive().InsertAsync(Arg.Any<Crypto>());
+        await _uow.DidNotReceive().SaveAsync();
+    }
+
+    [Fact]
+    public async Task Should_RenameAndSave_When_RenameCryptoValid()
+    {
+        var crypto = new Crypto { Id = 1, Name = "Old" };
+        ArrangeCrypto(crypto);
+
+        var result = await _sut.RenameCrypto(1, new CryptoPutDto { Name = "New" });
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Equal("New", crypto.Name);
+        await _cryptos.Received(1).UpdateAsync(crypto);
+        await _uow.Received(1).SaveAsync();
+    }
+
+    [Fact]
+    public async Task Should_ReturnNotFound_When_RenameCryptoMissing()
+    {
+        ArrangeCrypto(null);
+
+        var result = await _sut.RenameCrypto(1, new CryptoPutDto { Name = "New" });
+
+        Assert.IsType<NotFoundObjectResult>(result);
+        await _uow.DidNotReceive().SaveAsync();
+    }
+
+    [Fact]
+    public async Task Should_ReturnConflictAndKeepName_When_RenameNameTakenByOther()
+    {
+        var crypto = new Crypto { Id = 1, Name = "Old" };
+        ArrangeCrypto(crypto);
+        _service.IsNameTakenAsync("New", 1).Returns(true);
+
+        var result = await _sut.RenameCrypto(1, new CryptoPutDto { Name = "New" });
+
+        Assert.IsType<ConflictObjectResult>(result);
+        Assert.Equal("Old", crypto.Name);
+        await _uow.DidNotReceive().SaveAsync();
+    }
 }

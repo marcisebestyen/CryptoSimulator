@@ -45,7 +45,36 @@ namespace CryptoSimulator.Controllers
             return Ok(cryptosWithCurrentValue);
         }
 
+        [HttpPut("{cryptoId:int}")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<ActionResult> RenameCrypto(int cryptoId, [FromBody] CryptoPutDto dto)
+        {
+            var crypto = await _unitOfWork.CryptoRepository.GetByIdAsync(new object[] { cryptoId });
+            if (crypto == null)
+            {
+                return NotFound($"Crypto with ID {cryptoId} not found.");
+            }
+
+            if (await _cryptoService.IsNameTakenAsync(dto.Name, cryptoId))
+            {
+                return Conflict($"A crypto named '{dto.Name}' already exists.");
+            }
+
+            crypto.Name = dto.Name;
+            await _unitOfWork.CryptoRepository.UpdateAsync(crypto);
+            await _unitOfWork.SaveAsync();
+
+            return NoContent();
+        }
+
         [HttpPut("{cryptoId:int}/price")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -73,10 +102,19 @@ namespace CryptoSimulator.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(CryptoGetDto))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<ActionResult<CryptoGetDto>> CreateCrypto(CryptoPostDto dto)
         {
+            if (await _cryptoService.IsNameTakenAsync(dto.Name))
+            {
+                return Conflict($"A crypto named '{dto.Name}' already exists.");
+            }
+
             var crypto = _mapper.Map<Crypto>(dto);
             await _unitOfWork.CryptoRepository.InsertAsync(crypto);
             await _unitOfWork.SaveAsync();
@@ -85,7 +123,10 @@ namespace CryptoSimulator.Controllers
         }
 
         [HttpDelete("{cryptoId:int}")]
+        [Authorize(Roles = "Admin")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult> DeleteCrypto(int cryptoId)
         {

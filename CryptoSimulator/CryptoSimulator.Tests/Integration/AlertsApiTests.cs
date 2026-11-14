@@ -18,7 +18,7 @@ public class AlertsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Create_Returns201AndActiveAlert_WhenValid(string type, PriceAlertType expected)
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 50m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 50m);
 
         var response = await user.Client.PostAsJsonAsync("/api/alerts", NewAlert(user.Id, crypto.Id, type));
 
@@ -34,7 +34,7 @@ public class AlertsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Create_Returns400_WhenAlertTypeInvalid()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 50m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 50m);
 
         var response = await user.Client.PostAsJsonAsync("/api/alerts", NewAlert(user.Id, crypto.Id, "sideways"));
 
@@ -45,7 +45,7 @@ public class AlertsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Create_Returns400_WhenTargetPriceNotPositive()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 50m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 50m);
 
         var response = await user.Client.PostAsJsonAsync("/api/alerts", NewAlert(user.Id, crypto.Id, target: 0m));
 
@@ -56,7 +56,7 @@ public class AlertsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Create_Returns404_WhenUserMissing()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 50m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 50m);
 
         var response = await user.Client.PostAsJsonAsync("/api/alerts", NewAlert(2000000000, crypto.Id));
 
@@ -88,7 +88,7 @@ public class AlertsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     {
         var a = await TestApi.CreateUserAsync(Factory);
         var b = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(a.Client, 50m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 50m);
 
         var response = await a.Client.PostAsJsonAsync("/api/alerts", NewAlert(b.Id, crypto.Id));
 
@@ -100,7 +100,7 @@ public class AlertsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     {
         var user = await TestApi.CreateUserAsync(Factory);
         var other = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 50m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 50m);
         (await user.Client.PostAsJsonAsync("/api/alerts", NewAlert(user.Id, crypto.Id))).EnsureSuccessStatusCode();
         (await other.Client.PostAsJsonAsync("/api/alerts", NewAlert(other.Id, crypto.Id))).EnsureSuccessStatusCode();
 
@@ -137,7 +137,7 @@ public class AlertsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Delete_Returns204AndRemovesFromList_WhenExists()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 50m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 50m);
         var created = await user.Client.PostAsJsonAsync("/api/alerts", NewAlert(user.Id, crypto.Id));
         var alert = (await created.Content.ReadFromJsonAsync<PriceAlertGetDto>())!;
 
@@ -163,7 +163,7 @@ public class AlertsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     {
         var a = await TestApi.CreateUserAsync(Factory);
         var b = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(a.Client, 50m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 50m);
         var created = await b.Client.PostAsJsonAsync("/api/alerts", NewAlert(b.Id, crypto.Id));
         var alert = (await created.Content.ReadFromJsonAsync<PriceAlertGetDto>())!;
 
@@ -176,7 +176,7 @@ public class AlertsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task History_IsEmpty_WhenNothingTriggered()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 50m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 50m);
         (await user.Client.PostAsJsonAsync("/api/alerts", NewAlert(user.Id, crypto.Id))).EnsureSuccessStatusCode();
 
         var response = await user.Client.GetAsync($"/api/users/{user.Id}/alerts/history");
@@ -189,7 +189,7 @@ public class AlertsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task History_ContainsAlert_AfterPriceCrossesTarget()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 50m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 50m);
         (await user.Client.PostAsJsonAsync("/api/alerts", NewAlert(user.Id, crypto.Id, "above", 100m))).EnsureSuccessStatusCode();
 
         // The background price job is disabled in tests, so run the alert check directly.
@@ -209,7 +209,7 @@ public class AlertsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task History_StaysEmpty_WhenPriceDoesNotCrossTarget()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 50m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 50m);
         (await user.Client.PostAsJsonAsync("/api/alerts", NewAlert(user.Id, crypto.Id, "above", 100m))).EnsureSuccessStatusCode();
 
         using (var scope = Factory.Services.CreateScope())

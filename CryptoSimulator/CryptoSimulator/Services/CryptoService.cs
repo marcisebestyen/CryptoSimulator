@@ -12,6 +12,7 @@ namespace CryptoSimulator.Services
         Task<IEnumerable<CryptoGetWithCurrentValueDto>> GetAllWithCurrentValueAsync();
         Task<bool> UpdateCryptoPriceAsync(int cryptoId, decimal newPrice, DateTime updateTimestamp);
         Task<IEnumerable<CryptoPriceHistoryDto>> GetCryptoPriceHistoryAsync(int cryptoId);
+        Task<bool> IsNameTakenAsync(string name, int? excludeCryptoId = null);
     }
 
     public class CryptoService : ICryptoService
@@ -43,6 +44,12 @@ namespace CryptoSimulator.Services
 
             var results = await cryptoQuery.ToListAsync();
             return results;
+        }
+
+        public async Task<bool> IsNameTakenAsync(string name, int? excludeCryptoId = null)
+        {
+            var lowered = name.ToLower();
+            return await _context.Cryptos.AnyAsync(c => c.Name.ToLower() == lowered && c.Id != excludeCryptoId);
         }
 
         public async Task<bool> UpdateCryptoPriceAsync(int cryptoId, decimal newPrice, DateTime updateTimestamp)

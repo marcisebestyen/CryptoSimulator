@@ -57,6 +57,13 @@ public static class TestApi
         return user;
     }
 
+    // Writing cryptos is admin-only, so this signs up a throwaway admin to do it.
+    public static async Task<CryptoGetDto> CreateCryptoAsync(ApiFactory factory, decimal price)
+    {
+        var admin = await CreateAdminAsync(factory);
+        return await CreateCryptoAsync(admin.Client, price);
+    }
+
     // New crypto has no price log, so a price is set right away to make it tradable.
     public static async Task<CryptoGetDto> CreateCryptoAsync(HttpClient client, decimal price)
     {
