@@ -12,7 +12,10 @@ public class TokenServiceExtraTests
 {
     private static JwtSettings Settings(int minutes = 60, string key = "unit-tests-signing-key-0123456789ab") => new()
     {
-        Key = key, Issuer = "issuer", Audience = "audience", ExpiryMinutes = minutes,
+        Key = key,
+        Issuer = "issuer",
+        Audience = "audience",
+        ExpiryMinutes = minutes,
     };
 
     private static JsonWebToken Read(string token) => new JsonWebTokenHandler().ReadJsonWebToken(token);

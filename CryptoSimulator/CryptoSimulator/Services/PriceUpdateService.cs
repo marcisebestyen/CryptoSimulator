@@ -20,7 +20,7 @@ namespace CryptoSimulator.Services
         {
             _logger.LogInformation("PriceUpdateService is starting.");
 
-            while(!stoppingToken.IsCancellationRequested)
+            while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
@@ -60,9 +60,9 @@ namespace CryptoSimulator.Services
                 var cryptoService = scope.ServiceProvider.GetRequiredService<ICryptoService>();
                 var priceAlertService = scope.ServiceProvider.GetRequiredService<IPriceAlertService>();
 
-                var cryptos = await unitOfWork.CryptoRepository.GetAllAsync(); 
+                var cryptos = await unitOfWork.CryptoRepository.GetAllAsync();
 
-                foreach(var crypto in cryptos)
+                foreach (var crypto in cryptos)
                 {
                     if (stoppingToken.IsCancellationRequested)
                     {
@@ -104,7 +104,7 @@ namespace CryptoSimulator.Services
         private decimal GenerateNewPriceExample(decimal currentPrice)
         {
             var random = new Random();
-            decimal percentageChange = (decimal)(random.NextDouble() * 0.02 - 0.01); 
+            decimal percentageChange = (decimal)(random.NextDouble() * 0.02 - 0.01);
             decimal newPrice = currentPrice * (1 + percentageChange);
 
             return Math.Max(0.01m, Math.Round(newPrice, 2));

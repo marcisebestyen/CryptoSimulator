@@ -103,7 +103,7 @@ namespace CryptoSimulator.Controllers
             return Ok(alerts);
         }
 
-        [HttpDelete("{alertId:int}")] 
+        [HttpDelete("{alertId:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(object))]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(object))]
@@ -166,7 +166,7 @@ namespace CryptoSimulator.Controllers
                 {
                     return NotFound(new { message = error });
                 }
-                return BadRequest(new { message = error }); 
+                return BadRequest(new { message = error });
             }
 
             if (alerts == null)

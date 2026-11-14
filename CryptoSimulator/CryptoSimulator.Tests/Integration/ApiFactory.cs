@@ -26,6 +26,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Jwt:Key", "integration-tests-signing-key-0123456789");
         builder.UseSetting("Jwt:Issuer", "crypto-simulator-tests");
         builder.UseSetting("Jwt:Audience", "crypto-simulator-tests");
+        builder.UseSetting("Cors:AllowedOrigins:0", "http://localhost:5173");
 
         builder.ConfigureServices(services =>
         {

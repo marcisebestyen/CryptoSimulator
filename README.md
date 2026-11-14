@@ -6,6 +6,7 @@ ASP.NET Core (.NET 11) API that simulates a cryptocurrency exchange. Data lives 
 
 - .NET 11 SDK
 - Docker
+- Node.js and `pnpm` (frontend)
 - `dotnet-ef` tool (`dotnet tool install -g dotnet-ef --prerelease`)
 
 ## Database setup
@@ -69,6 +70,12 @@ In Swagger UI use the Authorize button and paste the token.
 
 The token carries the user id (`nameidentifier`), email and a role claim (`Admin` or `User`).
 
+### CORS
+
+Browsers may only call the API from origins listed in `Cors:AllowedOrigins` (a string array; startup fails if it is empty).
+`appsettings.Development.json` allows `http://localhost:5173` (the Vite dev server). For any other environment set
+`Cors__AllowedOrigins__0`, `Cors__AllowedOrigins__1`, ... Allowed headers are `Authorization` and `Content-Type`.
+
 ### Access rules
 
 Users may only touch their own data. Foreign data returns `403`; a missing user, wallet, transaction or alert returns `404`.
@@ -90,6 +97,26 @@ dotnet run --project CryptoSimulator/CryptoSimulator/CryptoSimulator.csproj
 ```
 
 Swagger UI (Development only): `http://localhost:5185/swagger`
+
+## Frontend
+
+React + Vite + TypeScript in `frontend/`. Start the backend first, then:
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+Open `http://localhost:5173`. Vite proxies `/api` to `http://localhost:5185`, so no CORS setup is needed. The page has a login form that calls `POST /api/users/login` to check the link.
+
+Tests (Vitest, Testing Library, MSW; no backend needed):
+
+```bash
+pnpm test        # run once
+pnpm test:watch  # watch mode
+pnpm coverage    # with coverage
+```
 
 ## Migrations
 

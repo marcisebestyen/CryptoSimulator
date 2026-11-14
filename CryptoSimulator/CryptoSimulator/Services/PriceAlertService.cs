@@ -11,7 +11,7 @@ namespace CryptoSimulator.Services
         Task CheckAlertsAsync(int cryptoId, decimal currentPrice);
         Task<(IEnumerable<PriceAlertGetDto>? alerts, string? error)> GetActiveAlertsForUserAsync(int userId);
         Task<(bool success, string? error)> DeleteAlertAsync(int alertId);
-        Task<(IEnumerable<PriceAlertGetDto>? alerts, string? error)> GetTriggeredAlertsHistoryForUserAsync(int userId); 
+        Task<(IEnumerable<PriceAlertGetDto>? alerts, string? error)> GetTriggeredAlertsHistoryForUserAsync(int userId);
 
     }
     public class PriceAlertService : IPriceAlertService
@@ -165,15 +165,15 @@ namespace CryptoSimulator.Services
                 return (null, $"User with ID {userId} not found.");
             }
 
-            var activeAlertsEntities = 
+            var activeAlertsEntities =
                 await _unitOfWork.PriceAlertRepository.
-                GetAsync(alert => alert.UserId == userId && 
-                        alert.IsActive,includeProperties: new[]{ "Crypto" });
+                GetAsync(alert => alert.UserId == userId &&
+                        alert.IsActive, includeProperties: new[] { "Crypto" });
 
-            if (activeAlertsEntities == null) 
+            if (activeAlertsEntities == null)
             {
                 _logger.LogWarning("Fetching active alerts for UserId {UserId} resulted in a null entity list.", userId);
-                return (new List<PriceAlertGetDto>(), null); 
+                return (new List<PriceAlertGetDto>(), null);
             }
 
             if (!activeAlertsEntities.Any())
@@ -235,13 +235,14 @@ namespace CryptoSimulator.Services
             if (triggeredAlertEntities == null)
             {
                 _logger.LogWarning("Fetching triggered alert history for UserId {UserId} resulted in a null entity list from repository.", userId);
-                return (new List<PriceAlertGetDto>(), null); 
+                return (new List<PriceAlertGetDto>(), null);
             }
 
             if (!triggeredAlertEntities.Any())
             {
                 _logger.LogInformation("No triggered alert history found for UserId: {UserId}", userId);
-                return (new List<PriceAlertGetDto>(), null);             }
+                return (new List<PriceAlertGetDto>(), null);
+            }
 
             var orderedAlertEntities = triggeredAlertEntities.OrderByDescending(alert => alert.LastTriggeredAt);
 
