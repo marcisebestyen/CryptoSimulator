@@ -7,6 +7,6 @@
         public DateTime From { get; set; } 
         public DateTime To { get; set; }
 
-        public Crypto Crypto { get; set; } 
+        public Crypto Crypto { get; set; } = null!;
     }
 }

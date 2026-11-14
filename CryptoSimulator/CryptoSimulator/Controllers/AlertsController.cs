@@ -1,19 +1,23 @@
 ﻿using CryptoSimulator.DTOs;
+using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace CryptoSimulator.Controllers
 {
     [Route("api/alerts")]
     [ApiController]
-    public class AlertsController : ControllerBase
+    [Authorize]
+    public class AlertsController : AuthorizedControllerBase
     {
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IPriceAlertService _priceAlertService;
         private readonly ILogger<AlertsController> _logger;
 
-        public AlertsController(IPriceAlertService service, ILogger<AlertsController> logger)
+        public AlertsController(IUnitOfWork unitOfWork, IPriceAlertService service, ILogger<AlertsController> logger) : base(unitOfWork)
         {
+            _unitOfWork = unitOfWork;
             _priceAlertService = service ?? throw new ArgumentNullException(nameof(service));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -21,6 +25,7 @@ namespace CryptoSimulator.Controllers
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(PriceAlertGetDto))]
         [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(object))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(object))]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(object))]
         public async Task<ActionResult<PriceAlertGetDto>> CreateAlert([FromBody] PriceAlertCreateDto dto)
         {
@@ -28,6 +33,12 @@ namespace CryptoSimulator.Controllers
             {
                 _logger.LogWarning("CreateAlert called with invalid model state.");
                 return BadRequest(ModelState);
+            }
+
+            var denied = await DenyUnlessOwnerAsync(dto.UserId);
+            if (denied != null)
+            {
+                return denied;
             }
 
             _logger.LogInformation("Attempting to create alert for UserId: {UserId}, CryptoId: {CryptoId}", dto.UserId, dto.CryptoId);
@@ -55,12 +66,19 @@ namespace CryptoSimulator.Controllers
             return Created($"/api/alerts/{alert.Id}", alert);
         }
 
-        [HttpGet("{userId:int}")] 
+        [HttpGet("~/api/users/{userId:int}/alerts")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<PriceAlertGetDto>))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(object))]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(object))]
         [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(object))]
         public async Task<ActionResult<IEnumerable<PriceAlertGetDto>>> GetActiveAlertsForUser(int userId)
         {
+            var denied = await DenyUnlessOwnerOrAdminAsync(userId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             _logger.LogInformation("Attempting to get active alerts for UserId: {UserId}", userId);
 
             var (alerts, error) = await _priceAlertService.GetActiveAlertsForUserAsync(userId);
@@ -87,10 +105,17 @@ namespace CryptoSimulator.Controllers
 
         [HttpDelete("{alertId:int}")] 
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(object))]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(object))]
         [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(object))]
         public async Task<IActionResult> DeleteAlert(int alertId)
         {
+            var alert = await _unitOfWork.PriceAlertRepository.GetByIdAsync(new object[] { alertId });
+            if (alert != null && !IsOwner(alert.UserId))
+            {
+                return Forbid();
+            }
+
             _logger.LogInformation("Attempting to delete alert with ID: {AlertId}", alertId);
 
             var (success, error) = await _priceAlertService.DeleteAlertAsync(alertId);
@@ -117,12 +142,19 @@ namespace CryptoSimulator.Controllers
             return NoContent();
         }
 
-        [HttpGet("history/{userId:int}")] 
+        [HttpGet("~/api/users/{userId:int}/alerts/history")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<PriceAlertGetDto>))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(object))]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(object))]
         [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(object))]
         public async Task<ActionResult<IEnumerable<PriceAlertGetDto>>> GetAlertHistoryForUser(int userId)
         {
+            var denied = await DenyUnlessOwnerOrAdminAsync(userId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             _logger.LogInformation("Attempting to get triggered alert history for UserId: {UserId}", userId);
 
             var (alerts, error) = await _priceAlertService.GetTriggeredAlertsHistoryForUserAsync(userId);

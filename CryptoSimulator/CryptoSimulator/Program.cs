@@ -1,26 +1,45 @@
+using CryptoSimulator.Configuration;
 using CryptoSimulator.Data;
-using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Npgsql;
 using System.Reflection;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Insert services to the container.
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-// Database context registration for home
+// Database context registration (PostgreSQL)
+var env = DotEnv.Load(builder.Environment.ContentRootPath);
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? BuildConnectionStringFromEnv(env);
 builder.Services.AddDbContext<CryptoSimulationDbContext>(options =>
-    options.UseSqlServer("Server=localhost;Database=CryptoDb;TrustServerCertificate=True;User Id=sa;Password=yourStrong(&)Password"));
-// Database context registration for test
-//builder.Services.AddDbContext<CryptoSimulationDbContext>(options =>
-//    options.UseSqlServer("Server=(local);Database=CryptoDb_E26Q3C;Trusted_Connection=True;TrustServerCertificate=True; "));
+    options.UseNpgsql(connectionString));
 // UnitOfWork registration
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+// JWT authentication
+var jwtSettings = JwtSettings.Load(builder.Configuration, env);
+builder.Services.AddSingleton(jwtSettings);
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtSettings.Audience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+        };
+    });
 builder.Services.AddEndpointsApiExplorer(); 
 // Swagger registration
 builder.Services.AddSwaggerGen(c =>
@@ -36,35 +55,34 @@ builder.Services.AddSwaggerGen(c =>
             Email = "sebestyenmarcell2@gmail.com",
         }
     });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "Paste the token returned by POST /api/users/login.",
+    });
+    c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>(),
+    });
 });
-// Repository registrations
-builder.Services.AddScoped(typeof(IRepository<Crypto>), typeof(Repository<Crypto>));
-builder.Services.AddScoped(typeof(IRepository<CryptoLog>), typeof(Repository<CryptoLog>));
-builder.Services.AddScoped(typeof(IRepository<MyCryptos>), typeof(Repository<MyCryptos>));
-builder.Services.AddScoped(typeof(IRepository<Transactions>), typeof(Repository<Transactions>));
-builder.Services.AddScoped(typeof(IRepository<User>), typeof(Repository<User>));
-builder.Services.AddScoped(typeof(IRepository<Wallet>), typeof(Repository<Wallet>));
 // Service registrations
 builder.Services.AddScoped<ICryptoService, CryptoService>();
-builder.Services.AddScoped<ICryptoLogService, CryptoLogService>();
-builder.Services.AddScoped<IMyCryptosService, MyCryptosService>();
 builder.Services.AddHostedService<PriceUpdateService>();
 builder.Services.AddScoped<IPriceAlertService, PriceAlertService>();
 builder.Services.AddScoped<ITradeService, TradeService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddSingleton<ITokenService, TokenService>();
 // AutoMapper registration
-builder.Services.AddAutoMapper(Assembly.GetExecutingAssembly());
+builder.Services.AddAutoMapper(cfg => cfg.AddMaps(Assembly.GetExecutingAssembly()));
 
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -73,8 +91,28 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
+
+static string BuildConnectionStringFromEnv(Dictionary<string, string> env)
+{
+    string Get(string key) => env.TryGetValue(key, out var value) && value.Length > 0
+        ? value
+        : throw new InvalidOperationException(
+            $"{key} is missing. Create a .env file (see .env.example) or set ConnectionStrings__DefaultConnection.");
+
+    return new NpgsqlConnectionStringBuilder
+    {
+        Host = env.GetValueOrDefault("POSTGRES_HOST", "localhost"),
+        Port = int.Parse(env.GetValueOrDefault("POSTGRES_PORT", "5432")),
+        Database = Get("POSTGRES_DB"),
+        Username = Get("POSTGRES_USER"),
+        Password = Get("POSTGRES_PASSWORD"),
+    }.ConnectionString;
+}
+
+public partial class Program { }

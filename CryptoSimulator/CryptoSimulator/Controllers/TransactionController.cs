@@ -1,46 +1,59 @@
 ﻿using AutoMapper;
 using CryptoSimulator.DTOs;
-using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CryptoSimulator.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/transactions")]
-    public class TransactionController : ControllerBase
+    public class TransactionController : AuthorizedControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ITransactionService _transactionService;
 
-        public TransactionController(IUnitOfWork unitOfWork, IMapper mapper, ITransactionService transactionsService)
+        public TransactionController(IUnitOfWork unitOfWork, IMapper mapper, ITransactionService transactionsService) : base(unitOfWork)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _transactionService = transactionsService;
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{transactionId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TransactionsGetDto))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<TransactionsGetDto>> GetTransaction(int id)
+        public async Task<ActionResult<TransactionsGetDto>> GetTransaction(int transactionId)
         {
-            var transactions = await _unitOfWork.TransactionRepository.GetAsync(t => t.Id == id, new[] { "Crypto", "Wallet.User" });
+            var transactions = await _unitOfWork.TransactionRepository.GetAsync(t => t.Id == transactionId, new[] { "Crypto", "Wallet.User" });
             var transaction = transactions.FirstOrDefault();
             if (transaction == null)
             {
-                return NotFound($"Transaction with ID {id} not found.");
+                return NotFound($"Transaction with ID {transactionId} not found.");
+            }
+            if (!IsOwnerOrAdmin(transaction.Wallet.UserId))
+            {
+                return Forbid();
             }
             return Ok(_mapper.Map<TransactionsGetDto>(transaction));
         }
 
-        [HttpGet("user/{userId}")]
+        [HttpGet("~/api/users/{userId:int}/transactions")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<TransactionsGetDto>))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<IEnumerable<TransactionsGetDto>>> GetUserTransactions(int userId, bool newestFirst = true)
         {
+            var denied = await DenyUnlessOwnerOrAdminAsync(userId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             var transactions = await _transactionService.GetUserTransactionsAsync(userId, newestFirst);
             if (transactions == null)
             {
@@ -48,48 +61,5 @@ namespace CryptoSimulator.Controllers
             }
             return Ok(transactions);
         }
-
-        //[HttpPost]
-        //[ProducesResponseType(StatusCodes.Status201Created, Type = typeof(TransactionsGetDto))]
-        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
-        //public async Task<ActionResult<TransactionsGetDto>> CreateTransaction(TransactionsPostDto dto)
-        //{
-        //    var transaction = _mapper.Map<Transactions>(dto);
-        //    await _unitOfWork.TransactionRepository.InsertAsync(transaction);
-        //    await _unitOfWork.SaveAsync();
-        //    var transactionDto = _mapper.Map<TransactionsGetDto>(transaction);
-        //    return CreatedAtAction(nameof(GetTransaction), new { id = transaction.Id }, transactionDto);
-        //}
-
-        //[HttpPut("{id}")]
-        //[ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TransactionsGetDto))]
-        //[ProducesResponseType(StatusCodes.Status400BadRequest)]
-        //public async Task<ActionResult<TransactionsGetDto>> UpdateTransaction(int id, [FromBody] TransactionsPutDto dto)
-        //{
-        //    var transaction = await _unitOfWork.TransactionRepository.GetByIdAsync(new object[] { id }, null, null);
-        //    if (transaction == null)
-        //    {
-        //        return NotFound($"Transaction with ID {id} not found.");
-        //    }
-        //    _mapper.Map(dto, transaction);
-        //    await _unitOfWork.TransactionRepository.UpdateAsync(transaction);
-        //    await _unitOfWork.SaveAsync();
-        //    return Ok(_mapper.Map<TransactionsGetDto>(transaction));
-        //}
-
-        //[HttpDelete("{id}")]
-        //[ProducesResponseType(StatusCodes.Status204NoContent)]
-        //[ProducesResponseType(StatusCodes.Status404NotFound)]
-        //public async Task<ActionResult> DeleteTransaction(int id)
-        //{
-        //    var transaction = await _unitOfWork.TransactionRepository.GetByIdAsync(new object[] { id }, null, null);
-        //    if (transaction == null)
-        //    {
-        //        return NotFound($"Transaction with ID {id} not found.");
-        //    }
-        //    await _unitOfWork.TransactionRepository.DeleteAsync(id);
-        //    await _unitOfWork.SaveAsync();
-        //    return NoContent();
-        //}
     }
 }

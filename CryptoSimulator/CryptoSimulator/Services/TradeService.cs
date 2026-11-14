@@ -1,6 +1,4 @@
-﻿using AutoMapper;
-using Azure.Core;
-using CryptoSimulator.DTOs;
+﻿using CryptoSimulator.DTOs;
 using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
 
@@ -18,17 +16,20 @@ namespace CryptoSimulator.Services
     public class TradeService : ITradeService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-        private static readonly DateTime MaxDateTimeValue = new DateTime(9999, 12, 31, 23, 59, 59);
+        private static readonly DateTime MaxDateTimeValue = new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc);
 
-        public TradeService(IUnitOfWork unitOfWork, IMapper mapper)
+        public TradeService(IUnitOfWork unitOfWork)
         {
             _unitOfWork = unitOfWork;
-            _mapper = mapper;
         }
 
         public async Task<bool> BuyCrypto(int userId, int cryptoId, decimal amount)
         {
+            if (amount <= 0)
+            {
+                return false;
+            }
+
             var wallet = _unitOfWork.WalletRepository
                 .Get(u => u.UserId == userId)
                 .FirstOrDefault();
@@ -64,7 +65,7 @@ namespace CryptoSimulator.Services
             wallet.Balance -= totalPrice;
             await _unitOfWork.WalletRepository.UpdateAsync(wallet);
 
-            var transactionPostDto = new TransactionsPostDto
+            var transaction = new Transactions
             {
                 WalletId = wallet.Id,
                 CryptoId = crypto.Id,
@@ -72,7 +73,6 @@ namespace CryptoSimulator.Services
                 ExchangeRate = cryptoLog.CurrentValue,
                 IsPurchase = true
             };
-            var transaction = _mapper.Map<Transactions>(transactionPostDto);
             await _unitOfWork.TransactionRepository.InsertAsync(transaction);
 
 
@@ -81,13 +81,12 @@ namespace CryptoSimulator.Services
                 .FirstOrDefault();
             if (myCrypto == null)
             {
-                var myCryptoPostDto = new MyCryptosDto
+                myCrypto = new MyCryptos
                 {
                     WalletId = wallet.Id,
                     CryptoId = crypto.Id,
                     Amount = amount
                 };
-                myCrypto = _mapper.Map<MyCryptos>(myCryptoPostDto);
                 await _unitOfWork.MyCryptosRepository.InsertAsync(myCrypto);
             }
             else
@@ -102,6 +101,11 @@ namespace CryptoSimulator.Services
 
         public async Task<bool> SellCrypto(int userId, int cryptoId, decimal amount)
         {
+            if (amount <= 0)
+            {
+                return false;
+            }
+
             var wallet = _unitOfWork.WalletRepository
                 .Get(w => w.UserId == userId)
                 .FirstOrDefault();
@@ -140,7 +144,7 @@ namespace CryptoSimulator.Services
             wallet.Balance += totalPrice;
             await _unitOfWork.WalletRepository.UpdateAsync(wallet);
 
-            var transactionPostDto = new TransactionsPostDto
+            var transaction = new Transactions
             {
                 WalletId = wallet.Id,
                 CryptoId = crypto.Id,
@@ -148,13 +152,12 @@ namespace CryptoSimulator.Services
                 ExchangeRate = cryptoLog.CurrentValue,
                 IsPurchase = false
             };
-            var transaction = _mapper.Map<Transactions>(transactionPostDto);
             await _unitOfWork.TransactionRepository.InsertAsync(transaction);
 
             myCrypto.Amount -= amount;
             if (myCrypto.Amount == 0)
             {
-                await _unitOfWork.MyCryptosRepository.DeleteAsync(myCrypto.CryptoId);
+                await _unitOfWork.MyCryptosRepository.DeleteAsync(myCrypto.WalletId, myCrypto.CryptoId);
             }
             else
             {
@@ -191,7 +194,7 @@ namespace CryptoSimulator.Services
 
             var heldCryptoIds = holdings.Select(h => h.CryptoId).Distinct().ToList();
 
-            DateTime maxDateTime = new DateTime(9999, 12, 31, 23, 59, 59);
+            DateTime maxDateTime = new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc);
             var currentLogs = await _unitOfWork.CryptoLogRepository.GetAsync(cl => heldCryptoIds.Contains(cl.CryptoId) && cl.To == maxDateTime);
             var rateLookup = currentLogs.ToDictionary(cl => cl.CryptoId, cl => cl.CurrentValue);
 
@@ -280,7 +283,6 @@ namespace CryptoSimulator.Services
             var detailedProfitLoss = await GetDetailedProfitLoss(userId);
             if (detailedProfitLoss == null)
             {
-                //Console.WriteLine($"DEBUG: GetDetailedProfitLoss returned null for UserId: {userId}");
                 return null;
             }
 
@@ -288,17 +290,11 @@ namespace CryptoSimulator.Services
 
             if (!detailList.Any())
             {
-                //Console.WriteLine($"DEBUG: GetDetailedProfitLoss returned null for UserId: {userId}");
                 return new PortfolioProfitLossDto { UserId = userId };
             }
 
-            //Console.WriteLine($"DEBUG: Found {detailList.Count} detailed items for UserId: {userId}");
-
             decimal totalCost = detailList.Sum(d => d.TotalCostBasis);
             decimal totalValue = detailList.Sum(d => d.CurrentValue);
-
-            //Console.WriteLine($"DEBUG: Calculated totals for UserId {userId}: Cost={totalCost}, Value={totalValue}");
-
 
             decimal totalProfitLossAmount = totalValue - totalCost;
             decimal totalProfitLossPercentage = (totalCost == 0) ? 0m : (totalProfitLossAmount / totalCost) * 100m;
@@ -311,8 +307,6 @@ namespace CryptoSimulator.Services
                 TotalProfitLossAmount = totalProfitLossAmount,
                 TotalProfitLossPercentage = Math.Round(totalProfitLossPercentage, 2)
             };
-
-            //Console.WriteLine($"DEBUG: Returning Summary DTO for UserId {userId}: Cost={summaryResult.TotalCostBasis}, Value={summaryResult.TotalCurrentCryptoValue}");
 
             return summaryResult;
         }

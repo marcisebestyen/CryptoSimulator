@@ -1,5 +1,4 @@
 ﻿
-using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
 
 namespace CryptoSimulator.Services
@@ -9,7 +8,7 @@ namespace CryptoSimulator.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<PriceUpdateService> _logger;
         private readonly TimeSpan _updateInterval = TimeSpan.FromSeconds(45);
-        private static readonly DateTime MaxDateTimeValue = new DateTime(9999, 12, 31, 23, 59, 59);
+        private static readonly DateTime MaxDateTimeValue = new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc);
 
         public PriceUpdateService(IServiceProvider serviceProvider, ILogger<PriceUpdateService> logger)
         {
@@ -63,9 +62,6 @@ namespace CryptoSimulator.Services
 
                 var cryptos = await unitOfWork.CryptoRepository.GetAllAsync(); 
 
-                //var cryptoRepository = unitOfWork.CryptoRepository;
-                //var cryptos = await cryptoRepository.GetAllAsync();
-
                 foreach(var crypto in cryptos)
                 {
                     if (stoppingToken.IsCancellationRequested)
@@ -75,8 +71,7 @@ namespace CryptoSimulator.Services
 
                     try
                     {
-                        decimal currentPriceBeforeUpdate = await GetCurrentPrice(unitOfWork, crypto.Id);
-                        decimal newPrice = GenerateNewPriceExample(crypto.Id, await GetCurrentPrice(unitOfWork, crypto.Id));
+                        decimal newPrice = GenerateNewPriceExample(await GetCurrentPrice(unitOfWork, crypto.Id));
                         DateTime updateTimestamp = DateTime.UtcNow;
                         bool processed = await cryptoService.UpdateCryptoPriceAsync(crypto.Id, newPrice, updateTimestamp);
 
@@ -106,7 +101,7 @@ namespace CryptoSimulator.Services
             return log?.CurrentValue ?? 0m;
         }
 
-        private decimal GenerateNewPriceExample(int cryptoId, decimal currentPrice)
+        private decimal GenerateNewPriceExample(decimal currentPrice)
         {
             var random = new Random();
             decimal percentageChange = (decimal)(random.NextDouble() * 0.02 - 0.01); 

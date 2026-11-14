@@ -2,7 +2,6 @@
 using CryptoSimulator.DTOs;
 using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
-using Microsoft.Identity.Client;
 
 namespace CryptoSimulator.Services
 {
