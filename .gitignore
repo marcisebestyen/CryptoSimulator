@@ -401,3 +401,6 @@ FodyWeavers.xsd
 
 # Local secrets
 .env
+
+/docs/*
+/.superpowers/*
