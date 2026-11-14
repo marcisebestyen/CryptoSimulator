@@ -6,6 +6,7 @@ ASP.NET Core (.NET 11) API that simulates a cryptocurrency exchange. Data lives 
 
 - .NET 11 SDK
 - Docker
+- Node.js and `pnpm` (frontend)
 - `dotnet-ef` tool (`dotnet tool install -g dotnet-ef --prerelease`)
 
 ## Database setup
@@ -90,6 +91,26 @@ dotnet run --project CryptoSimulator/CryptoSimulator/CryptoSimulator.csproj
 ```
 
 Swagger UI (Development only): `http://localhost:5185/swagger`
+
+## Frontend
+
+React + Vite + TypeScript in `frontend/`. Start the backend first, then:
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+Open `http://localhost:5173`. Vite proxies `/api` to `http://localhost:5185`, so no CORS setup is needed. The page has a login form that calls `POST /api/users/login` to check the link.
+
+Tests (Vitest, Testing Library, MSW; no backend needed):
+
+```bash
+pnpm test        # run once
+pnpm test:watch  # watch mode
+pnpm coverage    # with coverage
+```
 
 ## Migrations
 
