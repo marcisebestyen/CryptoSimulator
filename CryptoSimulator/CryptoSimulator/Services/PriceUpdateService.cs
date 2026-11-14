@@ -9,7 +9,7 @@ namespace CryptoSimulator.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<PriceUpdateService> _logger;
         private readonly TimeSpan _updateInterval = TimeSpan.FromSeconds(45);
-        private static readonly DateTime MaxDateTimeValue = new DateTime(9999, 12, 31, 23, 59, 59);
+        private static readonly DateTime MaxDateTimeValue = new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc);
 
         public PriceUpdateService(IServiceProvider serviceProvider, ILogger<PriceUpdateService> logger)
         {

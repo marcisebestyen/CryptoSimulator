@@ -1,9 +1,11 @@
+using CryptoSimulator.Configuration;
 using CryptoSimulator.Data;
 using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using Npgsql;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,12 +15,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-// Database context registration for home
+// Database context registration (PostgreSQL)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? BuildConnectionStringFromEnv(DotEnv.Load(builder.Environment.ContentRootPath));
 builder.Services.AddDbContext<CryptoSimulationDbContext>(options =>
-    options.UseSqlServer("Server=localhost;Database=CryptoDb;TrustServerCertificate=True;User Id=sa;Password=yourStrong(&)Password"));
-// Database context registration for test
-//builder.Services.AddDbContext<CryptoSimulationDbContext>(options =>
-//    options.UseSqlServer("Server=(local);Database=CryptoDb_E26Q3C;Trusted_Connection=True;TrustServerCertificate=True; "));
+    options.UseNpgsql(connectionString));
 // UnitOfWork registration
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddEndpointsApiExplorer(); 
@@ -78,3 +79,20 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+static string BuildConnectionStringFromEnv(Dictionary<string, string> env)
+{
+    string Get(string key) => env.TryGetValue(key, out var value) && value.Length > 0
+        ? value
+        : throw new InvalidOperationException(
+            $"{key} is missing. Create a .env file (see .env.example) or set ConnectionStrings__DefaultConnection.");
+
+    return new NpgsqlConnectionStringBuilder
+    {
+        Host = env.GetValueOrDefault("POSTGRES_HOST", "localhost"),
+        Port = int.Parse(env.GetValueOrDefault("POSTGRES_PORT", "5432")),
+        Database = Get("POSTGRES_DB"),
+        Username = Get("POSTGRES_USER"),
+        Password = Get("POSTGRES_PASSWORD"),
+    }.ConnectionString;
+}

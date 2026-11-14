@@ -7,7 +7,7 @@
         public int CryptoId { get; set; }
         public decimal Amount { get; set; }
         public decimal ExchangeRate { get; set; }
-        public DateTime Date { get; set; } = DateTime.Now;
+        public DateTime Date { get; set; } = DateTime.UtcNow;
         public bool IsPurchase { get; set; }
 
         public Wallet Wallet { get; set; } = null!;

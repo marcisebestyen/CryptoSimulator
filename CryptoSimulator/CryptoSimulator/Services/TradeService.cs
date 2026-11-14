@@ -18,7 +18,7 @@ namespace CryptoSimulator.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        private static readonly DateTime MaxDateTimeValue = new DateTime(9999, 12, 31, 23, 59, 59);
+        private static readonly DateTime MaxDateTimeValue = new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc);
 
         public TradeService(IUnitOfWork unitOfWork, IMapper mapper)
         {
@@ -190,7 +190,7 @@ namespace CryptoSimulator.Services
 
             var heldCryptoIds = holdings.Select(h => h.CryptoId).Distinct().ToList();
 
-            DateTime maxDateTime = new DateTime(9999, 12, 31, 23, 59, 59);
+            DateTime maxDateTime = new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc);
             var currentLogs = await _unitOfWork.CryptoLogRepository.GetAsync(cl => heldCryptoIds.Contains(cl.CryptoId) && cl.To == maxDateTime);
             var rateLookup = currentLogs.ToDictionary(cl => cl.CryptoId, cl => cl.CurrentValue);
 
