@@ -128,7 +128,8 @@ public class CryptosApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var history = await response.Content.ReadFromJsonAsync<List<CryptoPriceHistoryDto>>();
-        Assert.Equal(new[] { 10m, 30m }, history!.Select(h => h.Value).ToArray());
+        Assert.NotNull(history);
+        Assert.Equal(new[] { 10m, 30m }, history.Select(h => h.Value).ToArray());
         Assert.True(history[0].To <= history[1].From);
     }
 
