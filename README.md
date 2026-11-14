@@ -86,7 +86,7 @@ Users may only touch their own data. Foreign data returns `403`; a missing user,
 
 ### Cryptos
 
-- `POST /api/cryptos` and `PUT /api/cryptos/{id}` take `{ "name": "..." }`. A name already used by another crypto (case-insensitive) returns `409`. `PUT /api/cryptos/{id}` returns `204`, or `404` for an unknown crypto.
+- `POST /api/cryptos` takes `{ "name": "...", "initialPrice": 10.5 }`. `initialPrice` is required and must be at least `0.01` (`400` otherwise); it is saved as the first open-ended price record, so the crypto shows up in `GET /api/cryptos` right away. `PUT /api/cryptos/{id}` (rename) takes `{ "name": "..." }` and returns `204`, or `404` for an unknown crypto. For both, a name already used by another crypto (case-insensitive) returns `409`.
 - `GET /api/cryptos/{id}/price-history?page=1&pageSize=25` returns the price records newest first:
 
   ```json

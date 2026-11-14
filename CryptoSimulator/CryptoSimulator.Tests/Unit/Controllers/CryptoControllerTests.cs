@@ -128,13 +128,14 @@ public class CryptoControllerTests
         _mapper.Map<Crypto>(Arg.Any<CryptoPostDto>()).Returns(crypto);
         _mapper.Map<CryptoGetDto>(crypto).Returns(dto);
 
-        var result = await _sut.CreateCrypto(new CryptoPostDto { Name = "BTC" });
+        var result = await _sut.CreateCrypto(new CryptoPostDto { Name = "BTC", InitialPrice = 5m });
 
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         Assert.Equal(nameof(CryptoController.GetCrypto), created.ActionName);
         Assert.Equal(4, created.RouteValues!["cryptoId"]);
         Assert.Same(dto, created.Value);
-        await _cryptos.Received(1).InsertAsync(crypto);
+        await _service.Received(1).AddWithInitialPriceAsync(crypto, 5m,
+            Arg.Is<DateTime>(d => d.Kind == DateTimeKind.Utc));
         await _uow.Received(1).SaveAsync();
     }
 
@@ -234,10 +235,10 @@ public class CryptoControllerTests
     {
         _service.IsNameTakenAsync("BTC").Returns(true);
 
-        var result = await _sut.CreateCrypto(new CryptoPostDto { Name = "BTC" });
+        var result = await _sut.CreateCrypto(new CryptoPostDto { Name = "BTC", InitialPrice = 5m });
 
         Assert.IsType<ConflictObjectResult>(result.Result);
-        await _cryptos.DidNotReceive().InsertAsync(Arg.Any<Crypto>());
+        await _service.DidNotReceive().AddWithInitialPriceAsync(Arg.Any<Crypto>(), Arg.Any<decimal>(), Arg.Any<DateTime>());
         await _uow.DidNotReceive().SaveAsync();
     }
 

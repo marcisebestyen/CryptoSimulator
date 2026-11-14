@@ -118,7 +118,7 @@ namespace CryptoSimulator.Controllers
             }
 
             var crypto = _mapper.Map<Crypto>(dto);
-            await _unitOfWork.CryptoRepository.InsertAsync(crypto);
+            await _cryptoService.AddWithInitialPriceAsync(crypto, dto.InitialPrice, DateTime.UtcNow);
             await _unitOfWork.SaveAsync();
             var cryptoController = _mapper.Map<CryptoGetDto>(crypto);
             return CreatedAtAction(nameof(GetCrypto), new { cryptoId = crypto.Id }, cryptoController);

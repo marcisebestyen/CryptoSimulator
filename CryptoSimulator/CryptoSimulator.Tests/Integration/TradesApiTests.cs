@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using CryptoSimulator.Data;
 using CryptoSimulator.DTOs;
+using CryptoSimulator.Entities;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CryptoSimulator.Tests.Integration;
 
@@ -65,9 +68,13 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Buy_Returns400_WhenCryptoHasNoPrice()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var admin = await TestApi.CreateAdminAsync(Factory);
-        var created = await admin.Client.PostAsJsonAsync("/api/cryptos", new CryptoPostDto { Name = $"coin-{Guid.NewGuid():N}" });
-        var crypto = (await created.Content.ReadFromJsonAsync<CryptoGetDto>())!;
+        var crypto = new Crypto { Name = $"coin-{Guid.NewGuid():N}" };
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CryptoSimulationDbContext>();
+            db.Cryptos.Add(crypto);
+            await db.SaveChangesAsync();
+        }
 
         var response = await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 1m);
 

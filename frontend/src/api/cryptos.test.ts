@@ -54,7 +54,7 @@ describe('fetchCrypto', () => {
 })
 
 describe('createCrypto', () => {
-  it('posts the name as JSON with the bearer token', async () => {
+  it('posts the name and initial price as JSON with the bearer token', async () => {
     let body: unknown = null
     let auth: string | null = null
     server.use(
@@ -65,19 +65,19 @@ describe('createCrypto', () => {
       }),
     )
 
-    await expect(createCrypto('Doge')).resolves.toMatchObject({ id: 3, name: 'Doge' })
-    expect(body).toEqual({ name: 'Doge' })
+    await expect(createCrypto('Doge', 1.5)).resolves.toMatchObject({ id: 3, name: 'Doge' })
+    expect(body).toEqual({ name: 'Doge', initialPrice: 1.5 })
     expect(auth).toBe('Bearer test-token')
   })
 
   it('surfaces a 409 as ApiError', async () => {
     server.use(http.post(url, () => new HttpResponse('duplicate', { status: 409 })))
 
-    await expect(createCrypto('Doge')).rejects.toMatchObject({
+    await expect(createCrypto('Doge', 1.5)).rejects.toMatchObject({
       name: 'Error',
       status: 409,
     })
-    await expect(createCrypto('Doge')).rejects.toBeInstanceOf(ApiError)
+    await expect(createCrypto('Doge', 1.5)).rejects.toBeInstanceOf(ApiError)
   })
 })
 

@@ -36,8 +36,8 @@ export function fetchCrypto(id: number): Promise<{ id: number; name: string }> {
   return apiFetch<{ id: number; name: string }>(endpoints.crypto(id))
 }
 
-export function createCrypto(name: string): Promise<Crypto> {
-  return apiFetch<Crypto>(endpoints.cryptos, jsonRequest('POST', { name }))
+export function createCrypto(name: string, initialPrice: number): Promise<Crypto> {
+  return apiFetch<Crypto>(endpoints.cryptos, jsonRequest('POST', { name, initialPrice }))
 }
 
 export function renameCrypto(id: number, name: string): Promise<void> {

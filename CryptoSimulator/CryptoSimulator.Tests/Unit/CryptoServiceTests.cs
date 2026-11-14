@@ -59,6 +59,20 @@ public class CryptoServiceTests
     }
 
     [Fact]
+    public async Task Should_InsertCryptoAndOpenEndedLog_When_AddWithInitialPrice()
+    {
+        var cryptos = Substitute.For<IRepository<Crypto>>();
+        _uow.CryptoRepository.Returns(cryptos);
+        var crypto = new Crypto { Name = "BTC" };
+
+        await Sut().AddWithInitialPriceAsync(crypto, 5m, T0);
+
+        await cryptos.Received(1).InsertAsync(crypto);
+        await _logs.Received(1).InsertAsync(Arg.Is<CryptoLog>(l =>
+            l.Crypto == crypto && l.CurrentValue == 5m && l.From == T0 && l.To == Max));
+    }
+
+    [Fact]
     public async Task Should_OnlyInsert_When_NoPreviousLog()
     {
         var ok = await Sut().UpdateCryptoPriceAsync(5, 7m, T0);

@@ -15,7 +15,7 @@ public class CryptosApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         var client = (await TestApi.CreateAdminAsync(Factory)).Client;
         var name = $"coin-{Guid.NewGuid():N}";
 
-        var response = await client.PostAsJsonAsync("/api/cryptos", new CryptoPostDto { Name = name });
+        var response = await client.PostAsJsonAsync("/api/cryptos", new CryptoPostDto { Name = name, InitialPrice = 10m });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<CryptoGetDto>();
@@ -34,11 +34,59 @@ public class CryptosApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     }
 
     [Fact]
+    public async Task Create_ListsCryptoImmediatelyWithInitialPrice()
+    {
+        var client = (await TestApi.CreateAdminAsync(Factory)).Client;
+
+        var crypto = await TestApi.CreateCryptoAsync(client, 42.5m);
+        var list = await client.GetFromJsonAsync<List<CryptoGetWithCurrentValueDto>>("/api/cryptos");
+
+        Assert.Equal(42.5m, Assert.Single(list!, c => c.Id == crypto.Id).CurrentExchangeRate);
+    }
+
+    [Fact]
+    public async Task Create_RecordsSingleOpenEndedPriceHistory()
+    {
+        var client = (await TestApi.CreateAdminAsync(Factory)).Client;
+
+        var crypto = await TestApi.CreateCryptoAsync(client, 42.5m);
+        var page = await client.GetFromJsonAsync<PagedResult<CryptoPriceHistoryDto>>($"/api/cryptos/{crypto.Id}/price-history");
+
+        Assert.NotNull(page);
+        var record = Assert.Single(page.Items);
+        Assert.Equal(42.5m, record.Value);
+        Assert.Equal(new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc), record.To);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public async Task Create_Returns400_WhenPriceNotPositive(double price)
+    {
+        var client = (await TestApi.CreateAdminAsync(Factory)).Client;
+
+        var response = await client.PostAsJsonAsync("/api/cryptos",
+            new CryptoPostDto { Name = $"coin-{Guid.NewGuid():N}", InitialPrice = (decimal)price });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_Returns400_WhenPriceMissing()
+    {
+        var client = (await TestApi.CreateAdminAsync(Factory)).Client;
+
+        var response = await client.PostAsJsonAsync("/api/cryptos", new { name = $"coin-{Guid.NewGuid():N}" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Create_Returns401_WhenNoToken()
     {
         using var client = Factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/cryptos", new CryptoPostDto { Name = "x" });
+        var response = await client.PostAsJsonAsync("/api/cryptos", new CryptoPostDto { Name = "x", InitialPrice = 1m });
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -298,7 +346,7 @@ public class CryptosApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     {
         var user = await TestApi.CreateUserAsync(Factory);
 
-        var response = await user.Client.PostAsJsonAsync("/api/cryptos", new CryptoPostDto { Name = $"coin-{Guid.NewGuid():N}" });
+        var response = await user.Client.PostAsJsonAsync("/api/cryptos", new CryptoPostDto { Name = $"coin-{Guid.NewGuid():N}", InitialPrice = 1m });
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -447,7 +495,7 @@ public class CryptosApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         var existing = await TestApi.CreateCryptoAsync(client, 10m);
         var taken = changeCase ? existing.Name.ToUpperInvariant() : existing.Name;
 
-        var response = await client.PostAsJsonAsync("/api/cryptos", new CryptoPostDto { Name = taken });
+        var response = await client.PostAsJsonAsync("/api/cryptos", new CryptoPostDto { Name = taken, InitialPrice = 1m });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }

@@ -113,7 +113,7 @@ describe('CryptosPage', () => {
       expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled()
     })
 
-    it('Add posts name and refreshes list', async () => {
+    it('Add posts name and price and refreshes list', async () => {
       loginAsAdmin()
       let created: unknown = null
       let list = [bitcoin]
@@ -121,7 +121,7 @@ describe('CryptosPage', () => {
         http.get(url, () => HttpResponse.json(list)),
         http.post(url, async ({ request }) => {
           created = await request.json()
-          list = [...list, { id: 2, name: 'Ether', currentExchangeRate: 0 }]
+          list = [...list, { id: 2, name: 'Ether', currentExchangeRate: 12.5 }]
           return HttpResponse.json(list[1], { status: 201 })
         }),
       )
@@ -131,10 +131,31 @@ describe('CryptosPage', () => {
 
       await user.click(screen.getByRole('button', { name: 'Add' }))
       await user.type(await screen.findByLabelText('Name'), 'Ether')
+      await user.type(screen.getByLabelText('Price'), '12.5')
       await user.click(screen.getByRole('button', { name: 'Save' }))
 
       expect(await screen.findByText('Ether')).toBeInTheDocument()
-      expect(created).toEqual({ name: 'Ether' })
+      expect(created).toEqual({ name: 'Ether', initialPrice: 12.5 })
+    })
+
+    it('Add keeps Save disabled until price is at least 0.01', async () => {
+      loginAsAdmin()
+      listWith(bitcoin)
+      renderApp('/cryptos')
+      const user = userEvent.setup()
+      await screen.findByText('Bitcoin')
+
+      await user.click(screen.getByRole('button', { name: 'Add' }))
+      await user.type(await screen.findByLabelText('Name'), 'Ether')
+      const save = screen.getByRole('button', { name: 'Save' })
+      expect(save).toBeDisabled()
+
+      await user.type(screen.getByLabelText('Price'), '0')
+      expect(save).toBeDisabled()
+
+      await user.clear(screen.getByLabelText('Price'))
+      await user.type(screen.getByLabelText('Price'), '0.01')
+      expect(save).toBeEnabled()
     })
 
     async function openEdit(user: ReturnType<typeof userEvent.setup>) {
