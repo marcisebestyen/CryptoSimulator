@@ -20,6 +20,12 @@ describe('AppLayout', () => {
     expect(await screen.findByRole('link', { name: 'Cryptos' })).toBeInTheDocument()
   })
 
+  it('shows the app name in the sidebar', async () => {
+    renderApp('/cryptos')
+
+    expect(await screen.findByText('Crypto Simulator')).toBeInTheDocument()
+  })
+
   it('clears the token and shows login when logging out', async () => {
     renderApp('/cryptos')
 

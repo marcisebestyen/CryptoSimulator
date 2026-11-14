@@ -1,35 +1,37 @@
 import { createTheme, type MantineThemeOverride } from '@mantine/core'
 
+const githubDark = [
+  '#e6edf3',
+  '#c7c7c7',
+  '#b0b0b0',
+  '#9a9a9a',
+  '#30363d',
+  '#2a2a2a',
+  '#161b22',
+  '#0d1117',
+  '#010409',
+  '#010409',
+] as const
+
 export const theme: MantineThemeOverride = createTheme({
-  primaryColor: 'graphite',
+  primaryColor: 'accent',
   primaryShade: 6,
   colors: {
-    graphite: [
-      '#e4e6ea',
-      '#c9ccd2',
-      '#a9adb6',
-      '#8a8f9b',
-      '#6c7280',
-      '#515664',
-      '#3d424e',
-      '#2e323c',
-      '#23262e',
-      '#181a20',
+    accent: [
+      '#eaf3ff',
+      '#d1e5ff',
+      '#b0d2ff',
+      '#8cbcff',
+      '#69a5fb',
+      '#4a92f9',
+      '#2f81f7',
+      '#1f6feb',
+      '#1a5fc7',
+      '#164ea3',
     ],
-    dark: [
-      '#d5d8de',
-      '#b8bcc5',
-      '#9a9fab',
-      '#7d8290',
-      '#5f6472',
-      '#454a57',
-      '#343842',
-      '#2a2d36',
-      '#1f2229',
-      '#15171c',
-    ],
+    dark: [...githubDark],
   },
-  black: '#15171c',
-  white: '#e4e6ea',
+  black: '#010409',
+  white: '#e6edf3',
   defaultRadius: 'md',
 })

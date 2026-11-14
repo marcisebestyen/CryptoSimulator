@@ -27,13 +27,29 @@ export function CryptosPage() {
     columns,
     data: data ?? [],
     enablePagination: true,
+    enableRowSelection: true,
     state: { isLoading },
+    mantinePaperProps: { withBorder: true, style: { backgroundColor: 'var(--grid-body-bg)' } },
+    mantineTableProps: {
+      withTableBorder: true,
+      withColumnBorders: true,
+      withRowBorders: true,
+      striped: false,
+      highlightOnHover: true,
+    },
+    mantineTableBodyRowProps: ({ row }) => ({
+      onClick: row.getToggleSelectedHandler(),
+      className: row.getIsSelected() ? 'row-selected' : undefined,
+      style: { cursor: 'pointer' },
+    }),
+    mantineTopToolbarProps: { className: 'grid-toolbar' },
+    mantineTableHeadCellProps: { className: 'grid-head-cell' },
     renderEmptyRowsFallback: () => <Text ta="center" p="md">No cryptos yet.</Text>,
   })
 
   return (
     <Stack>
-      <Title order={2}>Cryptos</Title>
+      <Title order={2} fz="2rem">Cryptos</Title>
       {error && (
         <Alert color="red" title="Could not load cryptos">
           <Stack align="flex-start" gap="xs">

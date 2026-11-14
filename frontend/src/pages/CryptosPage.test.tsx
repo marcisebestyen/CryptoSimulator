@@ -22,6 +22,18 @@ describe('CryptosPage', () => {
     expect(screen.getByText((43250.5).toLocaleString(undefined, { maximumFractionDigits: 8 }))).toBeInTheDocument()
   })
 
+  it('selects a row when it is clicked and deselects on a second click', async () => {
+    server.use(http.get(url, () => HttpResponse.json([{ id: 1, name: 'Bitcoin', currentExchangeRate: 1 }])))
+    renderApp('/cryptos')
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByText('Bitcoin'))
+    expect(screen.getByRole('checkbox', { name: 'Toggle select row' })).toBeChecked()
+
+    await user.click(screen.getByText('Bitcoin'))
+    expect(screen.getByRole('checkbox', { name: 'Toggle select row' })).not.toBeChecked()
+  })
+
   it('shows an empty state for an empty list', async () => {
     server.use(http.get(url, () => HttpResponse.json([])))
     renderApp('/cryptos')

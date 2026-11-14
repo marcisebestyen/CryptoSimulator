@@ -1,3 +1,62 @@
 body {
   margin: 0;
 }
+
+.logout-button:hover {
+  color: var(--mantine-color-red-5);
+  background-color: var(--mantine-color-red-light);
+}
+
+:root {
+  --grid-line-color: #30363d;
+  --surface-raised: #161b22;
+  --page-bg: #0d1117;
+  --grid-body-bg: #010409;
+  --accent: #2f81f7;
+  --row-selected-bg: rgba(47, 129, 247, 0.18);
+  --row-hover-bg: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background-color: var(--page-bg);
+  color: #e6edf3;
+}
+
+.app-navbar {
+  background-color: var(--surface-raised);
+}
+
+.grid-toolbar,
+.grid-head-cell {
+  background-color: var(--surface-raised);
+}
+
+/* Explicit rules: guarantee visible grid lines whatever the Mantine/MRT variables resolve to. */
+.mrt-table {
+  --table-border-color: var(--grid-line-color);
+}
+
+.mrt-table :is(th, td):not(:last-child) {
+  border-inline-end: 1px solid var(--grid-line-color);
+}
+
+.mrt-table thead tr,
+.mrt-table tbody tr:not(:last-child) {
+  border-bottom: 1px solid var(--grid-line-color);
+}
+
+.mrt-table tbody td {
+  background-color: var(--grid-body-bg);
+}
+
+.mrt-table tbody tr:hover td {
+  background-color: var(--row-hover-bg);
+}
+
+.mrt-table tbody tr.row-selected td {
+  background-color: var(--row-selected-bg);
+}
+
+.mrt-table tbody tr.row-selected td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
