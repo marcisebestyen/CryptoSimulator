@@ -4,6 +4,7 @@ import { AppLayout } from './layout/AppLayout'
 import { CryptosPage } from './pages/CryptosPage'
 import { LoginPage } from './pages/LoginPage'
 import { PriceHistoryPage } from './pages/PriceHistoryPage'
+import { UserPage } from './pages/UserPage'
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route path="/cryptos" element={<CryptosPage />} />
           <Route path="/cryptos/:cryptoId/price-history" element={<PriceHistoryPage />} />
+          <Route path="/profile" element={<UserPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/cryptos" replace />} />

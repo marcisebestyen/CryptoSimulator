@@ -111,6 +111,24 @@ describe('AuthProvider', () => {
   })
 })
 
+describe('AuthProvider userId', () => {
+  beforeEach(() => localStorage.clear())
+  afterEach(() => localStorage.clear())
+
+  it('reads userId from a stored token', () => {
+    localStorage.setItem(TOKEN_KEY, makeJwt(future(), { nameid: '9' }))
+    const auth = renderProvider()
+
+    expect(auth.current.userId).toBe(9)
+  })
+
+  it('userId is null when signed out', () => {
+    const auth = renderProvider()
+
+    expect(auth.current.userId).toBeNull()
+  })
+})
+
 describe('useAuth', () => {
   it('throws outside the provider', () => {
     expect(() => renderHook(() => useAuth())).toThrow()

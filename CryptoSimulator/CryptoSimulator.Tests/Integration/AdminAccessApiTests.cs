@@ -35,7 +35,7 @@ public class AdminAccessApiTests(PostgresFixture postgres) : ApiTestBase(postgre
         var other = await TestApi.CreateUserAsync(Factory);
 
         var update = await admin.Client.PutAsJsonAsync($"/api/users/{other.Id}",
-            new UserPutDto { Username = other.Username, FirstName = "A", LastName = "B", Email = other.Email });
+            new UserPutDto { Username = other.Username, FirstName = "A", LastName = "B" });
         var delete = await admin.Client.DeleteAsync($"/api/users/{other.Id}");
 
         Assert.Equal(HttpStatusCode.OK, update.StatusCode);

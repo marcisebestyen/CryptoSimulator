@@ -5,6 +5,7 @@ export interface AuthContextValue {
   token: string | null
   user: LoginUser | null
   isAuthenticated: boolean
+  userId: number | null
   isAdmin: boolean
   signIn(email: string, password: string): Promise<void>
   signOut(): void

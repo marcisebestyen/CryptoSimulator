@@ -13,6 +13,7 @@ namespace CryptoSimulator.Services
             CreateMap<UserPutDto, User>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.Role, opt => opt.Ignore())
+                .ForMember(dest => dest.Email, opt => opt.Ignore())
                 .ForMember(dest => dest.Password, opt => opt.Ignore())
                 .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null &&
                 !(srcMember is string && string.IsNullOrEmpty((string)srcMember))));

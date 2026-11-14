@@ -1,6 +1,7 @@
 export const TOKEN_KEY = 'crypto-token'
 
 const ROLE_CLAIM = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
+const USER_ID_CLAIM = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'
 
 function readClaims(token: string): Record<string, unknown> | null {
   try {
@@ -28,6 +29,16 @@ export function getRoleFromToken(token: string): string | null {
   if (claims === null) return null
   const role = claims[ROLE_CLAIM] ?? claims.role
   return typeof role === 'string' ? role : null
+}
+
+export function getUserIdFromToken(token: string | null): number | null {
+  if (token === null) return null
+  const claims = readClaims(token)
+  if (claims === null) return null
+  const raw = claims[USER_ID_CLAIM] ?? claims.nameid
+  if (typeof raw !== 'string' && typeof raw !== 'number') return null
+  const id = Number(raw)
+  return raw !== '' && Number.isInteger(id) ? id : null
 }
 
 export function readToken(): string | null {
