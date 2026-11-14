@@ -1,6 +1,5 @@
 using CryptoSimulator.Configuration;
 using CryptoSimulator.Data;
-using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;
 using Microsoft.EntityFrameworkCore;
@@ -13,8 +12,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Insert services to the container.
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
 // Database context registration (PostgreSQL)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? BuildConnectionStringFromEnv(DotEnv.Load(builder.Environment.ContentRootPath));
@@ -38,17 +35,8 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-// Repository registrations
-builder.Services.AddScoped(typeof(IRepository<Crypto>), typeof(Repository<Crypto>));
-builder.Services.AddScoped(typeof(IRepository<CryptoLog>), typeof(Repository<CryptoLog>));
-builder.Services.AddScoped(typeof(IRepository<MyCryptos>), typeof(Repository<MyCryptos>));
-builder.Services.AddScoped(typeof(IRepository<Transactions>), typeof(Repository<Transactions>));
-builder.Services.AddScoped(typeof(IRepository<User>), typeof(Repository<User>));
-builder.Services.AddScoped(typeof(IRepository<Wallet>), typeof(Repository<Wallet>));
 // Service registrations
 builder.Services.AddScoped<ICryptoService, CryptoService>();
-builder.Services.AddScoped<ICryptoLogService, CryptoLogService>();
-builder.Services.AddScoped<IMyCryptosService, MyCryptosService>();
 builder.Services.AddHostedService<PriceUpdateService>();
 builder.Services.AddScoped<IPriceAlertService, PriceAlertService>();
 builder.Services.AddScoped<ITradeService, TradeService>();
@@ -62,10 +50,6 @@ builder.Services.AddAutoMapper(cfg => cfg.AddMaps(Assembly.GetExecutingAssembly(
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

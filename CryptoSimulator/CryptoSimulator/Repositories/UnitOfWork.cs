@@ -3,7 +3,7 @@ using CryptoSimulator.Entities;
 
 namespace CryptoSimulator.Repositories
 {
-    public interface IUnitOfWork : IDisposable
+    public interface IUnitOfWork
     {
         IRepository<Crypto> CryptoRepository { get; }
         IRepository<CryptoLog> CryptoLogRepository { get; }
@@ -13,7 +13,6 @@ namespace CryptoSimulator.Repositories
         IRepository<Wallet> WalletRepository { get; }
         IRepository<PriceAlert> PriceAlertRepository { get; }
 
-        void Save();
         Task SaveAsync();
     }
 
@@ -41,19 +40,9 @@ namespace CryptoSimulator.Repositories
         public IRepository<Wallet> WalletRepository { get; set; }
         public IRepository<PriceAlert> PriceAlertRepository { get; set; }
 
-        public void Save()
-        {
-            _context.SaveChanges();
-        }
-
         public async Task SaveAsync()
         {
             await _context.SaveChangesAsync();
-        }
-
-        public void Dispose()
-        {
-            _context.Dispose();
         }
     }
 }

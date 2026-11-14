@@ -1,6 +1,6 @@
-﻿using CryptoSimulator.DTOs;
-using CryptoSimulator.Entities;
+﻿using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
+using CryptoSimulator.Results;
 
 namespace CryptoSimulator.Services
 {
@@ -88,7 +88,7 @@ namespace CryptoSimulator.Services
                     return RegistrationResult.Failure("An error occurred while hashing the password.");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return RegistrationResult.Failure("An error occurred while hashing the password.");
             }
@@ -146,7 +146,7 @@ namespace CryptoSimulator.Services
                     return PasswordChangeResult.Failure("An error occurred while hashing the new password.");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return PasswordChangeResult.Failure("An error occurred while hashing the new password.");
             }
@@ -158,7 +158,7 @@ namespace CryptoSimulator.Services
             {
                 await _unitOfWork.SaveAsync();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return PasswordChangeResult.Failure("An error occurred while saving the new password.");
             }

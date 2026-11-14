@@ -1,9 +1,9 @@
 ﻿namespace CryptoSimulator.DTOs
 {
-    public class MyCryptosDto // used for Get, Put, Push as well
+    public class OwnedCryptoDto
     {
-        public int WalletId { get; set; }
         public int CryptoId { get; set; }
+        public string CryptoName { get; set; }
         public decimal Amount { get; set; }
     }
 }

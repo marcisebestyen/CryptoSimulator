@@ -10,8 +10,6 @@ namespace CryptoSimulator.Services
         {
             // User mappings
             CreateMap<User, UserGetDto>();
-            CreateMap<UserPutDto, User>();
-            CreateMap<UserPostDto, User>();
             CreateMap<UserPutDto, User>()
                 .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null &&
                 !(srcMember is string && string.IsNullOrEmpty((string)srcMember))));
@@ -19,36 +17,19 @@ namespace CryptoSimulator.Services
             // Wallet mappings
             CreateMap<Wallet, WalletGetDto>();
             CreateMap<WalletPutDto, Wallet>();
-            CreateMap<WalletPostDto, Wallet>();
 
             // Transactions mappings
             CreateMap<Transactions, TransactionsGetDto>();
-            CreateMap<TransactionsPutDto, Transactions>();
-            CreateMap<TransactionsPostDto, Transactions>();
-
-            // MyCryptos mappings
-            CreateMap<MyCryptos, MyCryptosDto>();
-            CreateMap<MyCryptosDto, MyCryptos>();
 
             // CryptoLog mappings
-            CreateMap<CryptoLog, CryptoLogDto>();
-            CreateMap<CryptoLogDto, CryptoLog>();
             CreateMap<CryptoLog, CryptoPriceHistoryDto>()
-                .ForMember(dest => dest.Value, opt => opt.MapFrom(src => src.CurrentValue))
-                .ForMember(dest => dest.From, opt => opt.MapFrom(src => src.From))
-                .ForMember(dest => dest.To, opt => opt.MapFrom(src => src.To));
+                .ForMember(dest => dest.Value, opt => opt.MapFrom(src => src.CurrentValue));
 
             // Crypto mappings
             CreateMap<Crypto, CryptoGetDto>();
-            CreateMap<CryptoPutDto, Crypto>();
             CreateMap<CryptoPostDto, Crypto>();
 
             // Alerts mappings 
-            CreateMap<PriceAlertCreateDto, PriceAlert>(); 
-            CreateMap<PriceAlert, PriceAlertGetDto>()
-                .ForMember(dest => dest.CryptoName, opt => opt.MapFrom(src => src.Crypto != null ? src.Crypto.Name : null));
-            CreateMap<PriceAlert, PriceAlertGetDto>()
-                .ForMember(dest => dest.CryptoName, opt => opt.MapFrom(src => src.Crypto != null ? src.Crypto.Name : null));
             CreateMap<PriceAlert, PriceAlertGetDto>()
                 .ForMember(dest => dest.CryptoName, opt => opt.MapFrom(src => src.Crypto != null ? src.Crypto.Name : null));
         }

@@ -1,7 +1,5 @@
-﻿using AutoMapper;
-using CryptoSimulator.DTOs;
+﻿using CryptoSimulator.DTOs;
 using CryptoSimulator.Repositories;
-using System.Numerics;
 
 namespace CryptoSimulator.Services
 {
@@ -13,12 +11,10 @@ namespace CryptoSimulator.Services
     public class WalletService : IWalletService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
 
-        public WalletService(IUnitOfWork unitOfWork, IMapper mapper)
+        public WalletService(IUnitOfWork unitOfWork)
         {
             _unitOfWork = unitOfWork;
-            _mapper = mapper;
         }
 
         public async Task<UserWalletDetailsDto?> GetUserWalletDetailsAsync(int userId)

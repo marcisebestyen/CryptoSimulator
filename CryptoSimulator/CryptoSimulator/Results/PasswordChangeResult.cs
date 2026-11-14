@@ -1,4 +1,4 @@
-﻿namespace CryptoSimulator.DTOs
+﻿namespace CryptoSimulator.Results
 {
     public class PasswordChangeResult
     {

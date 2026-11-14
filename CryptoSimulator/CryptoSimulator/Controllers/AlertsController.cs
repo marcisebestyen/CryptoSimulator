@@ -1,7 +1,6 @@
 ﻿using CryptoSimulator.DTOs;
 using CryptoSimulator.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace CryptoSimulator.Controllers
 {
@@ -55,7 +54,7 @@ namespace CryptoSimulator.Controllers
             return Created($"/api/alerts/{alert.Id}", alert);
         }
 
-        [HttpGet("{userId:int}")] 
+        [HttpGet("~/api/users/{userId:int}/alerts")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<PriceAlertGetDto>))]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(object))]
         [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(object))]
@@ -117,7 +116,7 @@ namespace CryptoSimulator.Controllers
             return NoContent();
         }
 
-        [HttpGet("history/{userId:int}")] 
+        [HttpGet("~/api/users/{userId:int}/alerts/history")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<PriceAlertGetDto>))]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(object))]
         [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(object))]

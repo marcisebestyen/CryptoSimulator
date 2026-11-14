@@ -1,6 +1,6 @@
 ﻿using CryptoSimulator.Entities;
 
-namespace CryptoSimulator.DTOs
+namespace CryptoSimulator.Results
 {
     public class RegistrationResult
     {

@@ -58,7 +58,6 @@ namespace CryptoSimulator.Services
             {
                 if (updateTimestamp < previousLog.From)
                 {
-                    Console.WriteLine($"Error: Update timestamp {updateTimestamp} is earlier than previous log's From time {previousLog.From} for CryptoId {cryptoId}.");
                     return false; 
                 }
                 previousLog.To = updateTimestamp;

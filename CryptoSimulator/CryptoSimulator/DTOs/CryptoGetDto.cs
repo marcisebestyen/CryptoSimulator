@@ -5,49 +5,4 @@
         public int Id { get; set; }
         public string Name { get; set; }
     }
-
-    public class CryptoGetWithCurrentValueDto
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public decimal CurrentExchangeRate { get; set; }   
-    }
-
-    public class CryptoPutDto
-    {
-        public string Name { get; set; }
-    }
-
-    public class CryptoPostDto
-    {
-        public string Name { get; set; }
-    }
-
-    public class  BuyCryptoDto
-    {
-        public int UserId { get; set; }
-        public int CryptoId { get; set; }
-        public decimal Amount { get; set; } 
-    }
-
-    public class SellCryptoDto
-    {
-        public int UserId { get; set; }
-        public int CryptoId { get; set; }
-        public decimal Amount { get; set; }
-    }
-
-    public class CryptoPriceHistoryDto
-    {
-        public decimal Value { get; set; }
-        public DateTime From { get; set; }
-        public DateTime To { get; set; }
-    }
-
-    public class OwnedCryptoDto
-    {
-        public int CryptoId { get; set; }
-        public string CryptoName { get; set; }
-        public decimal Amount { get; set; }
-    }
 }
