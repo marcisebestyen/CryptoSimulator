@@ -114,3 +114,5 @@ static string BuildConnectionStringFromEnv(Dictionary<string, string> env)
         Password = Get("POSTGRES_PASSWORD"),
     }.ConnectionString;
 }
+
+public partial class Program { }
