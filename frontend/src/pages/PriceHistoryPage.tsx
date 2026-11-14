@@ -4,8 +4,12 @@ import { MantineReactTable, useMantineReactTable, type MRT_ColumnDef, type MRT_P
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { ApiError } from '../api/client'
+import { PRICE_REFRESH_MS } from '../api/polling'
 import { fetchCrypto, fetchPriceHistory, type PriceHistoryItem } from '../api/cryptos'
 
+import { PriceHistoryChart } from './PriceHistoryChart'
+
+const CHART_POINTS = 100
 const OPEN_ENDED_YEAR = 9999
 
 const formatValue = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 8 })
@@ -22,7 +26,15 @@ export function PriceHistoryPage() {
     queryKey: ['price-history', cryptoId, pagination.pageIndex, pagination.pageSize],
     queryFn: () => fetchPriceHistory(cryptoId, pagination.pageIndex + 1, pagination.pageSize),
     placeholderData: keepPreviousData,
+    refetchInterval: PRICE_REFRESH_MS,
   })
+  const chartHistory = useQuery({
+    queryKey: ['price-history-chart', cryptoId],
+    queryFn: () => fetchPriceHistory(cryptoId, 1, CHART_POINTS),
+    refetchInterval: PRICE_REFRESH_MS,
+  })
+  // The API returns newest first; the chart needs oldest first.
+  const chartItems = useMemo(() => [...(chartHistory.data?.items ?? [])].reverse(), [chartHistory.data])
 
   // History is newest first, so the open-ended record is on page 1; keep the last seen rate on later pages.
   const [currentRate, setCurrentRate] = useState<number>()
@@ -72,6 +84,7 @@ export function PriceHistoryPage() {
           {failure instanceof ApiError ? failure.message : 'Cannot reach the server.'}
         </Alert>
       )}
+      {!notFound && <PriceHistoryChart items={chartItems} />}
       {!notFound && <MantineReactTable table={table} />}
     </Stack>
   )

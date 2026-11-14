@@ -1,7 +1,9 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { act } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { PRICE_REFRESH_MS } from '../api/polling'
 import { endpoints } from '../api/endpoints'
 import { loginAsValidUser, renderApp } from '../test/renderApp'
 import { server } from '../test/server'
@@ -44,6 +46,7 @@ describe('PriceHistoryPage', () => {
     server.use(
       http.get(historyUrl, ({ request }) => {
         const params = new URL(request.url).searchParams
+        if (params.get('pageSize') !== '25') return HttpResponse.json({ items: [], totalCount: 0, page: 1, pageSize: 100 })
         requested.push(`${params.get('page')}:${params.get('pageSize')}`)
         const page = Number(params.get('page'))
         return HttpResponse.json({
@@ -107,6 +110,72 @@ describe('PriceHistoryPage', () => {
     renderApp('/cryptos/1/price-history')
 
     expect(await screen.findByText('Crypto not found.')).toBeInTheDocument()
+  })
+
+  it('renders a price chart when history exists', async () => {
+    server.use(
+      http.get(historyUrl, () =>
+        HttpResponse.json({ items: makeItems(3), totalCount: 3, page: 1, pageSize: 25 }),
+      ),
+    )
+    renderApp('/cryptos/1/price-history')
+
+    expect(await screen.findByLabelText('Price chart')).toBeInTheDocument()
+  })
+
+  it('requests up to 100 records for the chart', async () => {
+    const pageSizes: (string | null)[] = []
+    server.use(
+      http.get(historyUrl, ({ request }) => {
+        pageSizes.push(new URL(request.url).searchParams.get('pageSize'))
+        return HttpResponse.json({ items: makeItems(3), totalCount: 3, page: 1, pageSize: 25 })
+      }),
+    )
+    renderApp('/cryptos/1/price-history')
+
+    await screen.findByLabelText('Price chart')
+    expect(pageSizes).toContain('100')
+  })
+
+  it('hides the chart when there is no history', async () => {
+    server.use(
+      http.get(historyUrl, () => HttpResponse.json({ items: [], totalCount: 0, page: 1, pageSize: 25 })),
+    )
+    renderApp('/cryptos/1/price-history')
+
+    expect(await screen.findByText('No price history yet.')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Price chart')).not.toBeInTheDocument()
+  })
+
+  describe('polling', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('refreshes the table and current rate after the refresh interval', async () => {
+      let calls = 0
+      server.use(
+        http.get(historyUrl, () => {
+          calls += 1
+          const value = calls <= 2 ? 1500 : 1750
+          return HttpResponse.json({
+            items: [{ value, from: '2024-03-01T00:00:00Z', to: '9999-12-31T23:59:59Z' }],
+            totalCount: 1,
+            page: 1,
+            pageSize: 25,
+          })
+        }),
+      )
+      renderApp('/cryptos/1/price-history')
+      expect(await screen.findByText('Current rate: 1,500')).toBeInTheDocument()
+
+      await act(() => vi.advanceTimersByTimeAsync(PRICE_REFRESH_MS))
+
+      expect(await screen.findByText('Current rate: 1,750')).toBeInTheDocument()
+    })
   })
 
   it('redirects to login when unauthenticated', async () => {

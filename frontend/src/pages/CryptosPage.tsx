@@ -7,6 +7,7 @@ import { Link } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { ApiError } from '../api/client'
 import { fetchCryptos, type Crypto } from '../api/cryptos'
+import { PRICE_REFRESH_MS } from '../api/polling'
 import { CryptoFormModal } from './CryptoFormModal'
 import { DeleteCryptoModal } from './DeleteCryptoModal'
 
@@ -17,7 +18,11 @@ const formatRate = (rate: number) => rate.toLocaleString(undefined, { maximumFra
 export function CryptosPage() {
   const { isAdmin } = useAuth()
   const [dialog, setDialog] = useState<Dialog>(null)
-  const { data, isLoading, error, refetch } = useQuery({ queryKey: ['cryptos'], queryFn: fetchCryptos })
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['cryptos'],
+    queryFn: fetchCryptos,
+    refetchInterval: PRICE_REFRESH_MS,
+  })
 
   const columns = useMemo<MRT_ColumnDef<Crypto>[]>(
     () => [

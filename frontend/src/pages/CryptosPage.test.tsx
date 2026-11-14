@@ -1,7 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { act } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { PRICE_REFRESH_MS } from '../api/polling'
 import { endpoints } from '../api/endpoints'
 import { TOKEN_KEY } from '../auth/token'
 import { makeJwt } from '../test/jwt'
@@ -22,6 +24,31 @@ describe('CryptosPage', () => {
 
     expect(await screen.findByText('Bitcoin')).toBeInTheDocument()
     expect(screen.getByText((43250.5).toLocaleString(undefined, { maximumFractionDigits: 8 }))).toBeInTheDocument()
+  })
+
+  describe('polling', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('refreshes rates after the refresh interval without user action', async () => {
+      let calls = 0
+      server.use(
+        http.get(url, () => {
+          calls += 1
+          return HttpResponse.json([{ id: 1, name: 'Bitcoin', currentExchangeRate: calls === 1 ? 100 : 250 }])
+        }),
+      )
+      renderApp('/cryptos')
+      expect(await screen.findByText('100')).toBeInTheDocument()
+
+      await act(() => vi.advanceTimersByTimeAsync(PRICE_REFRESH_MS))
+
+      expect(await screen.findByText('250')).toBeInTheDocument()
+    })
   })
 
   it('does not show an Id column', async () => {
