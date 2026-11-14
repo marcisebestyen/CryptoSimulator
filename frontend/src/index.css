@@ -13,7 +13,6 @@ body {
   --page-bg: #0d1117;
   --grid-body-bg: #010409;
   --accent: #2f81f7;
-  --row-selected-bg: rgba(47, 129, 247, 0.18);
   --row-hover-bg: rgba(255, 255, 255, 0.08);
 }
 
@@ -51,12 +50,4 @@ body {
 
 .mrt-table tbody tr:hover td {
   background-color: var(--row-hover-bg);
-}
-
-.mrt-table tbody tr.row-selected td {
-  background-color: var(--row-selected-bg);
-}
-
-.mrt-table tbody tr.row-selected td:first-child {
-  box-shadow: inset 3px 0 0 var(--accent);
 }

@@ -24,16 +24,12 @@ describe('CryptosPage', () => {
     expect(screen.getByText((43250.5).toLocaleString(undefined, { maximumFractionDigits: 8 }))).toBeInTheDocument()
   })
 
-  it('selects a row when it is clicked and deselects on a second click', async () => {
+  it('does not show an Id column', async () => {
     server.use(http.get(url, () => HttpResponse.json([{ id: 1, name: 'Bitcoin', currentExchangeRate: 1 }])))
     renderApp('/cryptos')
-    const user = userEvent.setup()
+    await screen.findByText('Bitcoin')
 
-    await user.click(await screen.findByText('Bitcoin'))
-    expect(screen.getByRole('checkbox', { name: 'Toggle select row' })).toBeChecked()
-
-    await user.click(screen.getByText('Bitcoin'))
-    expect(screen.getByRole('checkbox', { name: 'Toggle select row' })).not.toBeChecked()
+    expect(screen.queryByRole('columnheader', { name: /^Id/ })).not.toBeInTheDocument()
   })
 
   it('shows an empty state for an empty list', async () => {
@@ -86,31 +82,21 @@ describe('CryptosPage', () => {
       await screen.findByText('Bitcoin')
 
       expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Edit Bitcoin' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Delete Bitcoin' })).not.toBeInTheDocument()
     })
 
-    it('shows them for admin', async () => {
+    it('shows Add and per-row Edit and Delete for admin', async () => {
       loginAsAdmin()
-      listWith(bitcoin)
+      listWith(bitcoin, { id: 2, name: 'Ether', currentExchangeRate: 5 })
       renderApp('/cryptos')
       await screen.findByText('Bitcoin')
 
       expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
-    })
-
-    it('Edit and Delete are disabled with no selection', async () => {
-      loginAsAdmin()
-      listWith(bitcoin)
-      renderApp('/cryptos')
-      const user = userEvent.setup()
-      await user.click(await screen.findByText('Bitcoin'))
-      await user.click(screen.getByText('Bitcoin'))
-
-      expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled()
-      expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Edit Bitcoin' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Delete Bitcoin' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Edit Ether' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Delete Ether' })).toBeInTheDocument()
     })
 
     it('Add posts name and price and refreshes list', async () => {
@@ -159,8 +145,7 @@ describe('CryptosPage', () => {
     })
 
     async function openEdit(user: ReturnType<typeof userEvent.setup>) {
-      await user.click(await screen.findByText('Bitcoin'))
-      await user.click(screen.getByRole('button', { name: 'Edit' }))
+      await user.click(await screen.findByRole('button', { name: 'Edit Bitcoin' }))
       return within(await screen.findByRole('dialog'))
     }
 
@@ -247,8 +232,7 @@ describe('CryptosPage', () => {
       )
       renderApp('/cryptos')
       const user = userEvent.setup()
-      await user.click(await screen.findByText('Bitcoin'))
-      await user.click(screen.getByRole('button', { name: 'Delete' }))
+      await user.click(await screen.findByRole('button', { name: 'Delete Bitcoin' }))
       const dialog = within(await screen.findByRole('dialog'))
 
       expect(dialog.getByText(/Bitcoin/)).toBeInTheDocument()
@@ -270,8 +254,7 @@ describe('CryptosPage', () => {
       )
       renderApp('/cryptos')
       const user = userEvent.setup()
-      await user.click(await screen.findByText('Bitcoin'))
-      await user.click(screen.getByRole('button', { name: 'Delete' }))
+      await user.click(await screen.findByRole('button', { name: 'Delete Bitcoin' }))
       await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }))
 
       expect(await screen.findByText('No cryptos yet.')).toBeInTheDocument()
