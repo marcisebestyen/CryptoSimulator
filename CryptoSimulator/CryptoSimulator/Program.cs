@@ -2,10 +2,13 @@ using CryptoSimulator.Configuration;
 using CryptoSimulator.Data;
 using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Npgsql;
 using System.Reflection;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,12 +16,30 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 // Database context registration (PostgreSQL)
+var env = DotEnv.Load(builder.Environment.ContentRootPath);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? BuildConnectionStringFromEnv(DotEnv.Load(builder.Environment.ContentRootPath));
+    ?? BuildConnectionStringFromEnv(env);
 builder.Services.AddDbContext<CryptoSimulationDbContext>(options =>
     options.UseNpgsql(connectionString));
 // UnitOfWork registration
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+// JWT authentication
+var jwtSettings = JwtSettings.Load(builder.Configuration, env);
+builder.Services.AddSingleton(jwtSettings);
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtSettings.Audience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+        };
+    });
 builder.Services.AddEndpointsApiExplorer(); 
 // Swagger registration
 builder.Services.AddSwaggerGen(c =>
@@ -34,6 +55,17 @@ builder.Services.AddSwaggerGen(c =>
             Email = "sebestyenmarcell2@gmail.com",
         }
     });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "Paste the token returned by POST /api/users/login.",
+    });
+    c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>(),
+    });
 });
 // Service registrations
 builder.Services.AddScoped<ICryptoService, CryptoService>();
@@ -43,6 +75,7 @@ builder.Services.AddScoped<ITradeService, TradeService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddSingleton<ITokenService, TokenService>();
 // AutoMapper registration
 builder.Services.AddAutoMapper(cfg => cfg.AddMaps(Assembly.GetExecutingAssembly()));
 
@@ -58,6 +91,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

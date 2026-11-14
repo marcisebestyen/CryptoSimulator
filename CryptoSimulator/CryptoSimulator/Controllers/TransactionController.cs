@@ -2,11 +2,13 @@
 using CryptoSimulator.DTOs;
 using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CryptoSimulator.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/transactions")]
     public class TransactionController : ControllerBase
     {

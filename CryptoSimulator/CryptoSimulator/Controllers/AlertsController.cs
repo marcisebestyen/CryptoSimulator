@@ -1,11 +1,13 @@
 ﻿using CryptoSimulator.DTOs;
 using CryptoSimulator.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CryptoSimulator.Controllers
 {
     [Route("api/alerts")]
     [ApiController]
+    [Authorize]
     public class AlertsController : ControllerBase
     {
         private readonly IPriceAlertService _priceAlertService;

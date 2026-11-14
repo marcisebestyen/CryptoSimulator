@@ -3,11 +3,13 @@ using CryptoSimulator.DTOs;
 using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CryptoSimulator.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/cryptos")]
     public class CryptoController : ControllerBase
     {

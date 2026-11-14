@@ -2,24 +2,28 @@
 using CryptoSimulator.DTOs;
 using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CryptoSimulator.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/users")]
     public class UserController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IUserService _userService;
+        private readonly ITokenService _tokenService;
 
-        public UserController(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService)
+        public UserController(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService, ITokenService tokenService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _userService = userService;
+            _tokenService = tokenService;
         }
 
         [HttpGet("{userId:int}")]
@@ -35,10 +39,11 @@ namespace CryptoSimulator.Controllers
             return Ok(_mapper.Map<UserGetDto>(user));
         }
 
+        [AllowAnonymous]
         [HttpPost("login")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserGetDto))]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(LoginResponseDto))]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<UserGetDto>> Login([FromBody] UserLoginDto loginDto)
+        public async Task<ActionResult<LoginResponseDto>> Login([FromBody] UserLoginDto loginDto)
         {
             var loginSuccessful = await _userService.LoginAsync(loginDto.Email, loginDto.Password);
             if (!loginSuccessful)
@@ -52,9 +57,14 @@ namespace CryptoSimulator.Controllers
                 return Unauthorized("An error occurred after login");
             }
 
-            return Ok(_mapper.Map<UserGetDto>(user));
+            return Ok(new LoginResponseDto
+            {
+                Token = _tokenService.CreateToken(user),
+                User = _mapper.Map<UserGetDto>(user),
+            });
         }
 
+        [AllowAnonymous]
         [HttpPost("register")]
         [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(UserGetDto))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

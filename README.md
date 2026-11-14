@@ -44,6 +44,29 @@ the git-ignored `.env` file (it looks in the project folder and its parents). Ho
 `localhost:5432`; override with `POSTGRES_HOST` / `POSTGRES_PORT`. No password lives in tracked files.
 For any other environment, set `ConnectionStrings__DefaultConnection` instead; it wins over `.env`.
 
+## Authentication
+
+All endpoints require a JWT bearer token, except `POST /api/users/login` and `POST /api/users/register`.
+Configure signing in `.env` (see `.env.example`):
+
+- `JWT_KEY`: signing key, at least 32 characters (startup fails otherwise). Generate one with `openssl rand -base64 48`.
+- `JWT_ISSUER`, `JWT_AUDIENCE`: required.
+- `JWT_EXPIRY_MINUTES`: optional, defaults to `60`.
+
+Environment variables `Jwt__Key`, `Jwt__Issuer`, `Jwt__Audience` and `Jwt__ExpiryMinutes` win over `.env`.
+
+`POST /api/users/login` returns `200` with:
+
+```json
+{
+  "token": "<jwt>",
+  "user": { "id": 1, "role": 0, "username": "...", "firstName": "...", "lastName": "...", "email": "..." }
+}
+```
+
+Send the token on every other request: `Authorization: Bearer <jwt>`. Missing, invalid or expired tokens get `401`.
+In Swagger UI use the Authorize button and paste the token.
+
 ## Run
 
 ```bash
