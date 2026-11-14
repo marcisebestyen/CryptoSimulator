@@ -58,7 +58,7 @@ namespace CryptoSimulator.Services
             {
                 if (updateTimestamp < previousLog.From)
                 {
-                    return false; 
+                    return false;
                 }
                 previousLog.To = updateTimestamp;
                 await _unitOfWork.CryptoLogRepository.UpdateAsync(previousLog);

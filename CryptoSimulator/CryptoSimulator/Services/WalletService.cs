@@ -32,7 +32,7 @@ namespace CryptoSimulator.Services
             {
                 UserId = userId,
                 FiatBalance = wallet.Balance,
-                OwnedCryptos = new List<OwnedCryptoDto>() 
+                OwnedCryptos = new List<OwnedCryptoDto>()
             };
 
             foreach (var holding in holdings)
