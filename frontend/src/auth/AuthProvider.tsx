@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { setTokenGetter, setUnauthorizedHandler } from '../api/client'
 import { login, type LoginUser } from '../api/login'
 import { AuthContext, type AuthContextValue } from './useAuth'
-import { clearToken, readToken, saveToken } from './token'
+import { clearToken, getRoleFromToken, readToken, saveToken } from './token'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(readToken)
@@ -30,7 +30,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [signOut])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ token, user, isAuthenticated: token !== null, signIn, signOut }),
+    () => ({
+      token,
+      user,
+      isAuthenticated: token !== null,
+      isAdmin: token !== null && getRoleFromToken(token) === 'Admin',
+      signIn,
+      signOut,
+    }),
     [token, user, signIn, signOut],
   )
 

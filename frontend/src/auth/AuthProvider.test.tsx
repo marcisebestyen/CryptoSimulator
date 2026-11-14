@@ -85,6 +85,30 @@ describe('AuthProvider', () => {
 
     expect(auth.current.isAuthenticated).toBe(false)
   })
+
+  it('isAdmin is true for an Admin token', () => {
+    localStorage.setItem(TOKEN_KEY, makeJwt(future(), { role: 'Admin' }))
+    const auth = renderProvider()
+
+    expect(auth.current.isAdmin).toBe(true)
+  })
+
+  it('isAdmin is false for a User token and when signed out', () => {
+    localStorage.setItem(TOKEN_KEY, makeJwt(future(), { role: 'User' }))
+    const userAuth = renderProvider()
+    expect(userAuth.current.isAdmin).toBe(false)
+
+    localStorage.clear()
+    const signedOut = renderProvider()
+    expect(signedOut.current.isAdmin).toBe(false)
+  })
+
+  it('isAdmin is false when the token has no role claim', () => {
+    localStorage.setItem(TOKEN_KEY, makeJwt(future()))
+    const auth = renderProvider()
+
+    expect(auth.current.isAdmin).toBe(false)
+  })
 })
 
 describe('useAuth', () => {
