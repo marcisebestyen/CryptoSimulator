@@ -3,9 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import App from './App'
+import { endpoints } from './api/endpoints'
 import { server } from './test/server'
 
-const loginUrl = 'http://localhost:3000/api/users/login'
+const loginUrl = `http://localhost:3000${endpoints.login}`
 
 async function submitLogin() {
   const user = userEvent.setup()

@@ -1,5 +1,6 @@
 import { useState, type SubmitEvent } from 'react'
-import { ApiError, login } from './api/login'
+import { ApiError } from './api/client'
+import { login } from './api/login'
 
 export default function App() {
   const [email, setEmail] = useState('')

@@ -1,17 +1,19 @@
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { server } from '../test/server'
-import { ApiError, login } from './login'
+import { ApiError } from './client'
+import { endpoints } from './endpoints'
+import { login } from './login'
 
-const loginUrl = 'http://localhost:3000/api/users/login'
+const loginUrl = `http://localhost:3000${endpoints.login}`
 
 describe('login', () => {
   it('returns token and user when credentials are valid', async () => {
-    server.use(http.post(loginUrl, () => HttpResponse.json({ token: 'jwt', user: { email: 'a@b.co' } })))
+    server.use(http.post(loginUrl, () => HttpResponse.json({ token: 'jwt', user: { id: 1, username: 'abe', email: 'a@b.co' } })))
 
     const result = await login('a@b.co', 'secret')
 
-    expect(result).toEqual({ token: 'jwt', user: { email: 'a@b.co' } })
+    expect(result).toEqual({ token: 'jwt', user: { id: 1, username: 'abe', email: 'a@b.co' } })
   })
 
   it('sends email and password as json body', async () => {
@@ -19,7 +21,7 @@ describe('login', () => {
     server.use(
       http.post(loginUrl, async ({ request }) => {
         body = await request.json()
-        return HttpResponse.json({ token: 'jwt', user: { email: 'a@b.co' } })
+        return HttpResponse.json({ token: 'jwt', user: { id: 1, username: 'abe', email: 'a@b.co' } })
       }),
     )
 
