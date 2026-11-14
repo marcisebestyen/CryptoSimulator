@@ -168,15 +168,31 @@ public class UsersApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task UpdateUser_ReturnsUpdatedUser_WhenExists()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var newEmail = $"{Guid.NewGuid():N}@example.com";
 
         var response = await user.Client.PutAsJsonAsync($"/api/users/{user.Id}",
-            new UserPutDto { Username = user.Username, FirstName = "Ada", LastName = "Lovelace", Email = newEmail });
+            new { username = user.Username, firstName = "Ada", lastName = "Lovelace", email = $"{Guid.NewGuid():N}@example.com" });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<UserGetDto>();
         Assert.Equal("Ada", body!.FirstName);
-        Assert.Equal(newEmail, body.Email);
+        Assert.Equal("Lovelace", body.LastName);
+        Assert.Equal(user.Email, body.Email);
+        var fetched = await user.Client.GetFromJsonAsync<UserGetDto>($"/api/users/{user.Id}");
+        Assert.Equal(user.Email, fetched!.Email);
+    }
+
+    [Fact]
+    public async Task UpdateUser_IgnoresEmail_WhenEmailInBody()
+    {
+        var user = await TestApi.CreateUserAsync(Factory);
+
+        var response = await user.Client.PutAsJsonAsync($"/api/users/{user.Id}",
+            new { username = user.Username, firstName = "Grace", lastName = "Hopper", email = "changed@example.com" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var fetched = await user.Client.GetFromJsonAsync<UserGetDto>($"/api/users/{user.Id}");
+        Assert.Equal(user.Email, fetched!.Email);
+        Assert.Equal("Grace", fetched.FirstName);
     }
 
     [Fact]
@@ -185,7 +201,7 @@ public class UsersApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         var user = await TestApi.CreateUserAsync(Factory);
 
         var response = await user.Client.PutAsJsonAsync("/api/users/2000000000",
-            new UserPutDto { Username = "x", FirstName = "x", LastName = "x", Email = "x@example.com" });
+            new UserPutDto { Username = "x", FirstName = "x", LastName = "x" });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -197,7 +213,7 @@ public class UsersApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         var b = await TestApi.CreateUserAsync(Factory);
 
         var response = await a.Client.PutAsJsonAsync($"/api/users/{b.Id}",
-            new UserPutDto { Username = "hijack", FirstName = "x", LastName = "x", Email = "hijack@example.com" });
+            new UserPutDto { Username = "hijack", FirstName = "x", LastName = "x" });
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }

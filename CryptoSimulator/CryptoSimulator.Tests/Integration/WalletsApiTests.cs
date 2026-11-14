@@ -21,6 +21,20 @@ public class WalletsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     }
 
     [Fact]
+    public async Task GetUserWallet_ReturnsPriceAndValue_ForOwnedCrypto()
+    {
+        var user = await TestApi.CreateUserAsync(Factory);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
+        (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 2m)).EnsureSuccessStatusCode();
+
+        var wallet = await user.Client.GetFromJsonAsync<UserWalletDetailsDto>($"/api/users/{user.Id}/wallet");
+
+        var owned = Assert.Single(wallet!.OwnedCryptos);
+        Assert.Equal(100m, owned.CurrentPrice);
+        Assert.Equal(200m, owned.CurrentValue);
+    }
+
+    [Fact]
     public async Task GetUserWallet_Returns404_WhenUserMissing()
     {
         using var client = await Factory.CreateAuthorizedClientAsync();

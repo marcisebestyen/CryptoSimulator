@@ -20,7 +20,7 @@ export interface PagedResult<T> {
   pageSize: number
 }
 
-function jsonRequest(method: string, body: unknown): RequestInit {
+export function jsonRequest(method: string, body: unknown): RequestInit {
   return {
     method,
     headers: { 'Content-Type': 'application/json' },

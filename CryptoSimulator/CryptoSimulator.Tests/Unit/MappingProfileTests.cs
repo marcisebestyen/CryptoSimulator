@@ -64,14 +64,14 @@ public class MappingProfileTests
     public void Should_KeepExistingValues_When_PutDtoFieldsNullOrEmpty()
     {
         var user = new User { Username = "old", FirstName = "F", LastName = "L", Email = "old@x.com" };
-        var put = new UserPutDto { Username = "", FirstName = null!, LastName = "New", Email = "new@x.com" };
+        var put = new UserPutDto { Username = "", FirstName = null!, LastName = "New" };
 
         Mapper().Map(put, user);
 
         Assert.Equal("old", user.Username);
         Assert.Equal("F", user.FirstName);
         Assert.Equal("New", user.LastName);
-        Assert.Equal("new@x.com", user.Email);
+        Assert.Equal("old@x.com", user.Email);
     }
 
     [Fact]

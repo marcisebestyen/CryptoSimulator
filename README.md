@@ -101,6 +101,10 @@ Users may only touch their own data. Foreign data returns `403`; a missing user,
 - `amount` of `POST /api/trades/buy` and `/sell` must be greater than 0.
 - `balance` of `PUT /api/wallets/{id}` must not be negative.
 
+`GET /api/users/{id}/wallet` lists each holding in `ownedCryptos` as `{ cryptoId, cryptoName, amount, currentPrice, currentValue }`. `currentPrice` is the open price record (`0` if there is none) and `currentValue` is `amount * currentPrice`.
+
+`PUT /api/users/{id}` no longer accepts `email`; the body takes only the other profile fields and the email stays unchanged.
+
 `PUT /api/cryptos/{id}/price` returns `404` for an unknown crypto.
 
 ## Run
