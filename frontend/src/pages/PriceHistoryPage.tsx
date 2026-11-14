@@ -10,7 +10,8 @@ const OPEN_ENDED_YEAR = 9999
 
 const formatValue = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 8 })
 const formatDate = (iso: string) => new Date(iso).toLocaleString()
-const formatTo = (iso: string) => (new Date(iso).getUTCFullYear() === OPEN_ENDED_YEAR ? 'Current' : formatDate(iso))
+const isOpenEnded = (iso: string) => new Date(iso).getUTCFullYear() === OPEN_ENDED_YEAR
+const formatTo = (iso: string) => (isOpenEnded(iso) ? 'Current' : formatDate(iso))
 
 export function PriceHistoryPage() {
   const cryptoId = Number(useParams().cryptoId)
@@ -22,6 +23,11 @@ export function PriceHistoryPage() {
     queryFn: () => fetchPriceHistory(cryptoId, pagination.pageIndex + 1, pagination.pageSize),
     placeholderData: keepPreviousData,
   })
+
+  // History is newest first, so the open-ended record is on page 1; keep the last seen rate on later pages.
+  const [currentRate, setCurrentRate] = useState<number>()
+  const loadedRate = history.data?.items.find((item) => isOpenEnded(item.to))?.value
+  if (loadedRate !== undefined && loadedRate !== currentRate) setCurrentRate(loadedRate)
 
   const columns = useMemo<MRT_ColumnDef<PriceHistoryItem>[]>(
     () => [
@@ -59,6 +65,7 @@ export function PriceHistoryPage() {
       <Title order={2} fz="2rem">
         {crypto.data ? `${crypto.data.name} price history` : 'Price history'}
       </Title>
+      {currentRate !== undefined && <Text>{`Current rate: ${formatValue(currentRate)}`}</Text>}
       {notFound && <Alert color="red">Crypto not found.</Alert>}
       {failure && !notFound && (
         <Alert color="red" title="Could not load price history">

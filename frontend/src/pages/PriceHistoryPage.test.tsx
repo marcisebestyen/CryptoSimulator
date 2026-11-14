@@ -80,6 +80,25 @@ describe('PriceHistoryPage', () => {
     expect(await screen.findByText('Current')).toBeInTheDocument()
   })
 
+  it('shows current rate in header', async () => {
+    server.use(
+      http.get(historyUrl, () =>
+        HttpResponse.json({
+          items: [
+            { value: 1500, from: '2024-02-01T00:00:00Z', to: '2024-03-01T00:00:00Z' },
+            { value: 2000.5, from: '2024-03-01T00:00:00Z', to: '9999-12-31T23:59:59Z' },
+          ],
+          totalCount: 2,
+          page: 1,
+          pageSize: 25,
+        }),
+      ),
+    )
+    renderApp('/cryptos/1/price-history')
+
+    expect(await screen.findByText('Current rate: 2,000.5')).toBeInTheDocument()
+  })
+
   it('shows not found for unknown crypto', async () => {
     server.use(
       http.get(cryptoUrl, () => new HttpResponse('Crypto with ID 1 not found.', { status: 404 })),
