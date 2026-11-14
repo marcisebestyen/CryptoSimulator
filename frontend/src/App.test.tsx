@@ -1,49 +1,33 @@
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { screen } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
-import App from './App'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { endpoints } from './api/endpoints'
+import { loginAsValidUser, renderApp } from './test/renderApp'
 import { server } from './test/server'
 
-const loginUrl = `http://localhost:3000${endpoints.login}`
-
-async function submitLogin() {
-  const user = userEvent.setup()
-  render(<App />)
-  await user.type(screen.getByPlaceholderText('Email'), 'a@b.co')
-  await user.type(screen.getByPlaceholderText('Password'), 'secret')
-  await user.click(screen.getByRole('button', { name: 'Log in' }))
-}
-
-describe('App', () => {
-  it('shows no message before submit', () => {
-    render(<App />)
-
-    expect(screen.queryByText(/logged in|backend/i)).not.toBeInTheDocument()
+describe('App routing', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    server.use(http.get(`http://localhost:3000${endpoints.cryptos}`, () => HttpResponse.json([])))
   })
 
-  it('shows user email when login succeeds', async () => {
-    server.use(http.post(loginUrl, () => HttpResponse.json({ token: 'jwt', user: { email: 'a@b.co' } })))
+  it('sends an unauthenticated user from /cryptos to login', () => {
+    renderApp('/cryptos')
 
-    await submitLogin()
-
-    expect(await screen.findByText('Logged in as a@b.co')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument()
   })
 
-  it('shows status and message when backend rejects login', async () => {
-    server.use(http.post(loginUrl, () => new HttpResponse('Invalid email or password.', { status: 401 })))
+  it('sends an authenticated user from / to cryptos', async () => {
+    loginAsValidUser()
+    renderApp('/')
 
-    await submitLogin()
-
-    expect(await screen.findByText('Backend answered 401: Invalid email or password.')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Cryptos' })).toBeInTheDocument()
   })
 
-  it('tells backend is unreachable when request fails', async () => {
-    server.use(http.post(loginUrl, () => HttpResponse.error()))
+  it('sends an unknown path to cryptos', async () => {
+    loginAsValidUser()
+    renderApp('/nope/nothing')
 
-    await submitLogin()
-
-    expect(await screen.findByText(/cannot reach backend/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Cryptos' })).toBeInTheDocument()
   })
 })
