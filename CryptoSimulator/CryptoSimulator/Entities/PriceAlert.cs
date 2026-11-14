@@ -13,9 +13,9 @@ namespace CryptoSimulator.Entities
     {
         public int Id { get; set; }
         public int UserId { get; set; }
-        public User User { get; set; }
+        public User User { get; set; } = null!;
         public int CryptoId { get; set; }
-        public Crypto Crypto { get; set; }
+        public Crypto Crypto { get; set; } = null!;
 
         [Column(TypeName = "decimal(18, 8)")]
         public decimal TargetPrice { get; set; }

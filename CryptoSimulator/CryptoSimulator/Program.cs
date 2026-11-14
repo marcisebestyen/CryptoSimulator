@@ -3,7 +3,7 @@ using CryptoSimulator.Entities;
 using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,7 +55,7 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 // AutoMapper registration
-builder.Services.AddAutoMapper(Assembly.GetExecutingAssembly());
+builder.Services.AddAutoMapper(cfg => cfg.AddMaps(Assembly.GetExecutingAssembly()));
 
 
 var app = builder.Build();

@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Azure.Core;
 using CryptoSimulator.DTOs;
 using CryptoSimulator.Repositories;
 using CryptoSimulator.Services;

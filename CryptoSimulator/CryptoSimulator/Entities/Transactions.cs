@@ -10,7 +10,7 @@
         public DateTime Date { get; set; } = DateTime.Now;
         public bool IsPurchase { get; set; }
 
-        public Wallet Wallet { get; set; } 
-        public Crypto Crypto { get; set; } 
+        public Wallet Wallet { get; set; } = null!;
+        public Crypto Crypto { get; set; } = null!;
     }
 }
