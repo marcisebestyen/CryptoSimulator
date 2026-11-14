@@ -64,6 +64,7 @@ public class CryptoControllerTests
     [Fact]
     public async Task Should_ReturnNoContentAndSave_When_PriceUpdateSucceeds()
     {
+        ArrangeCrypto(new Crypto { Id = 1 });
         _service.UpdateCryptoPriceAsync(1, 10m, Arg.Any<DateTime>()).Returns(true);
 
         var result = await _sut.UpdateCryptoPrice(1, new ManualPriceUpdateDto { NewPrice = 10m });
@@ -85,6 +86,18 @@ public class CryptoControllerTests
     }
 
     [Fact]
+    public async Task Should_NotCallServiceOrSave_When_UpdatePriceCryptoMissing()
+    {
+        ArrangeCrypto(null);
+
+        var result = await _sut.UpdateCryptoPrice(1, new ManualPriceUpdateDto { NewPrice = 10m });
+
+        Assert.IsType<NotFoundObjectResult>(result);
+        await _service.DidNotReceive().UpdateCryptoPriceAsync(Arg.Any<int>(), Arg.Any<decimal>(), Arg.Any<DateTime>());
+        await _uow.DidNotReceive().SaveAsync();
+    }
+
+    [Fact]
     public async Task Should_ReturnBadRequest_When_PriceUpdateFailsAndCryptoExists()
     {
         _service.UpdateCryptoPriceAsync(1, 10m, Arg.Any<DateTime>()).Returns(false);
@@ -98,6 +111,7 @@ public class CryptoControllerTests
     [Fact]
     public async Task Should_PassUtcTimestamp_When_UpdatingPrice()
     {
+        ArrangeCrypto(new Crypto { Id = 1 });
         _service.UpdateCryptoPriceAsync(1, 10m, Arg.Any<DateTime>()).Returns(true);
 
         await _sut.UpdateCryptoPrice(1, new ManualPriceUpdateDto { NewPrice = 10m });

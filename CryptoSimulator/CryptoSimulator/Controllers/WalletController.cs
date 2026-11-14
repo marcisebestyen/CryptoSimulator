@@ -10,13 +10,13 @@ namespace CryptoSimulator.Controllers
     [ApiController]
     [Authorize]
     [Route("api/wallets")]
-    public class WalletController : ControllerBase
+    public class WalletController : AuthorizedControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IWalletService _walletService;
 
-        public WalletController(IUnitOfWork unitOfWork, IMapper mapper, IWalletService walletService)
+        public WalletController(IUnitOfWork unitOfWork, IMapper mapper, IWalletService walletService) : base(unitOfWork)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -25,9 +25,17 @@ namespace CryptoSimulator.Controllers
 
         [HttpGet("~/api/users/{userId:int}/wallet")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserWalletDetailsDto))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult<UserWalletDetailsDto>> GetUserWallet(int userId)
         {
+            var denied = await DenyUnlessOwnerOrAdminAsync(userId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             var walletDetails = await _walletService.GetUserWalletDetailsAsync(userId);
 
             if (walletDetails == null)
@@ -41,6 +49,7 @@ namespace CryptoSimulator.Controllers
         [HttpPut("{walletId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(WalletGetDto))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<WalletGetDto>> UpdateWallet(int walletId, [FromBody] WalletPutDto dto)
         {
@@ -48,6 +57,10 @@ namespace CryptoSimulator.Controllers
             if (wallet == null)
             {
                 return NotFound($"Wallet with ID {walletId} not found.");
+            }
+            if (!IsOwnerOrAdmin(wallet.UserId))
+            {
+                return Forbid();
             }
             _mapper.Map(dto, wallet);
             await _unitOfWork.WalletRepository.UpdateAsync(wallet);
@@ -57,6 +70,7 @@ namespace CryptoSimulator.Controllers
 
         [HttpDelete("{walletId:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult> DeleteWallet(int walletId)
         {
@@ -64,6 +78,10 @@ namespace CryptoSimulator.Controllers
             if (wallet == null)
             {
                 return NotFound($"Wallet with ID {walletId} not found.");
+            }
+            if (!IsOwnerOrAdmin(wallet.UserId))
+            {
+                return Forbid();
             }
             await _unitOfWork.WalletRepository.DeleteAsync(walletId);
             await _unitOfWork.SaveAsync();

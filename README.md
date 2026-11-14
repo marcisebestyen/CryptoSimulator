@@ -67,6 +67,22 @@ Environment variables `Jwt__Key`, `Jwt__Issuer`, `Jwt__Audience` and `Jwt__Expir
 Send the token on every other request: `Authorization: Bearer <jwt>`. Missing, invalid or expired tokens get `401`.
 In Swagger UI use the Authorize button and paste the token.
 
+The token carries the user id (`nameidentifier`), email and a role claim (`Admin` or `User`).
+
+### Access rules
+
+Users may only touch their own data. Foreign data returns `403`; a missing user, wallet, transaction or alert returns `404`.
+
+- Owner or `Admin`: `GET/PUT/DELETE /api/users/{id}`, `PUT/DELETE /api/wallets/{id}`, `GET /api/transactions/{id}`, and the `GET /api/users/{id}/...` routes (wallet, portfolio, profit-loss, profit-loss/summary, transactions, alerts, alerts/history).
+- Owner only (an admin gets `403`): `POST /api/users/{id}/change-password`, `POST /api/trades/buy` and `/sell` (body `userId`), `POST /api/alerts` (body `userId`) and `DELETE /api/alerts/{id}`.
+
+### Validation (`400`)
+
+- `amount` of `POST /api/trades/buy` and `/sell` must be greater than 0.
+- `balance` of `PUT /api/wallets/{id}` must not be negative.
+
+`PUT /api/cryptos/{id}/price` returns `404` for an unknown crypto.
+
 ## Run
 
 ```bash

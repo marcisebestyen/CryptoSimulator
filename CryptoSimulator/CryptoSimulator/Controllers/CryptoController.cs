@@ -53,17 +53,17 @@ namespace CryptoSimulator.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult> UpdateCryptoPrice(int cryptoId, [FromBody] ManualPriceUpdateDto dto)
         {
+            var cryptoExist = await _unitOfWork.CryptoRepository.GetByIdAsync(new object[] { cryptoId });
+            if (cryptoExist == null)
+            {
+                return NotFound($"Crypto with ID {cryptoId} not found.");
+            }
+
             DateTime updateTimestamp = DateTime.UtcNow;
 
             bool success = await _cryptoService.UpdateCryptoPriceAsync(cryptoId, dto.NewPrice, updateTimestamp);
             if (!success)
             {
-                var cryptoExist = await _unitOfWork.CryptoRepository.GetByIdAsync(new object[] { cryptoId });
-                if (cryptoExist == null)
-                {
-                    return NotFound($"Crypto with ID {cryptoId} not found.");
-                }
-
                 return BadRequest("Failed to process price update. Check input or logs");
             }
 

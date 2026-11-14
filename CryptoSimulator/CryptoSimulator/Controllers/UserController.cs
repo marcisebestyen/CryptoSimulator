@@ -11,14 +11,14 @@ namespace CryptoSimulator.Controllers
     [ApiController]
     [Authorize]
     [Route("api/users")]
-    public class UserController : ControllerBase
+    public class UserController : AuthorizedControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IUserService _userService;
         private readonly ITokenService _tokenService;
 
-        public UserController(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService, ITokenService tokenService)
+        public UserController(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService, ITokenService tokenService) : base(unitOfWork)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -29,8 +29,15 @@ namespace CryptoSimulator.Controllers
         [HttpGet("{userId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserGetDto))]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult<UserGetDto>> GetUser(int userId)
         {
+            var denied = await DenyUnlessOwnerOrAdminAsync(userId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             var user = await _unitOfWork.UserRepository.GetByIdAsync(new object[] { userId }, null, null);
             if (user == null)
             {
@@ -103,8 +110,15 @@ namespace CryptoSimulator.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult> ChangePassword(int userId, [FromBody] UserChangePasswordDto changePasswordDto)
         {
+            var denied = await DenyUnlessOwnerAsync(userId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             var changeResult = await _userService.ChangePasswordAsync(userId, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
             if (!changeResult.Succeeded)
             {
@@ -124,8 +138,15 @@ namespace CryptoSimulator.Controllers
         [HttpPut("{userId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserGetDto))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult<UserGetDto>> UpdateUser(int userId, UserPutDto dto)
         {
+            var denied = await DenyUnlessOwnerOrAdminAsync(userId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             var user = await _unitOfWork.UserRepository.GetByIdAsync(new object[] { userId }, null, null);
             if (user == null)
             {
@@ -140,8 +161,15 @@ namespace CryptoSimulator.Controllers
         [HttpDelete("{userId:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult> DeleteUser(int userId)
         {
+            var denied = await DenyUnlessOwnerOrAdminAsync(userId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             var user = await _unitOfWork.UserRepository.GetByIdAsync(new object[] { userId }, null, null);
             if (user == null)
             {

@@ -9,12 +9,12 @@ namespace CryptoSimulator.Controllers
     [ApiController]
     [Authorize]
     [Route("api/trades")]
-    public class TradeController : ControllerBase
+    public class TradeController : AuthorizedControllerBase
     {
         IUnitOfWork _unitOfWork;
         ITradeService _tradeService;
 
-        public TradeController(IUnitOfWork unitOfWork, ITradeService tradeService)
+        public TradeController(IUnitOfWork unitOfWork, ITradeService tradeService) : base(unitOfWork)
         {
             _unitOfWork = unitOfWork;
             _tradeService = tradeService;
@@ -29,9 +29,16 @@ namespace CryptoSimulator.Controllers
         [HttpPost("buy")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult> BuyCrypto([FromBody] BuyCryptoDto buyDto)
         {
+            var denied = await DenyUnlessOwnerAsync(buyDto.UserId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             if (!await UserExistsAsync(buyDto.UserId))
             {
                 return NotFound($"User with ID {buyDto.UserId} not found.");
@@ -48,9 +55,16 @@ namespace CryptoSimulator.Controllers
         [HttpPost("sell")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult> SellCrypto([FromBody] SellCryptoDto sellDto)
         {
+            var denied = await DenyUnlessOwnerAsync(sellDto.UserId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             if (!await UserExistsAsync(sellDto.UserId))
             {
                 return NotFound($"User with ID {sellDto.UserId} not found.");
@@ -66,9 +80,16 @@ namespace CryptoSimulator.Controllers
 
         [HttpGet("~/api/users/{userId:int}/portfolio")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PortfolioDto))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<PortfolioDto>> GetPortfolio(int userId)
         {
+            var denied = await DenyUnlessOwnerOrAdminAsync(userId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             if (!await UserExistsAsync(userId))
             {
                 return NotFound($"User with ID {userId} not found.");
@@ -84,9 +105,16 @@ namespace CryptoSimulator.Controllers
 
         [HttpGet("~/api/users/{userId:int}/portfolio/profit-loss")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<CryptoProfitLossDto>))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<IEnumerable<CryptoProfitLossDto>>> GetDetailedProfitLoss(int userId)
         {
+            var denied = await DenyUnlessOwnerOrAdminAsync(userId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             if (!await UserExistsAsync(userId))
             {
                 return NotFound($"User with ID {userId} not found.");
@@ -102,9 +130,16 @@ namespace CryptoSimulator.Controllers
 
         [HttpGet("~/api/users/{userId:int}/portfolio/profit-loss/summary")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PortfolioProfitLossDto))]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<PortfolioProfitLossDto>> GetPortfolioProfitLossSummary(int userId)
         {
+            var denied = await DenyUnlessOwnerOrAdminAsync(userId);
+            if (denied != null)
+            {
+                return denied;
+            }
+
             if (!await UserExistsAsync(userId))
             {
                 return NotFound($"User with ID {userId} not found.");

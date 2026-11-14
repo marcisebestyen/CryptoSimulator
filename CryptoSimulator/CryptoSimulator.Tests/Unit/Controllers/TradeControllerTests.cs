@@ -18,7 +18,7 @@ public class TradeControllerTests
     public TradeControllerTests()
     {
         _uow.UserRepository.Returns(_users);
-        _sut = new TradeController(_uow, _service);
+        _sut = new TradeController(_uow, _service).SignedInAs();
     }
 
     private void ArrangeUser(bool exists) =>
@@ -187,5 +187,56 @@ public class TradeControllerTests
         var result = await _sut.GetPortfolioProfitLossSummary(1);
 
         Assert.Same(summary, Assert.IsType<OkObjectResult>(result.Result).Value);
+    }
+
+    [Theory]
+    [InlineData(2, "User")]
+    [InlineData(99, "Admin")]
+    public async Task Should_ReturnForbidAndNotTrade_When_BuyOrSellForAnotherUser(int callerId, string role)
+    {
+        ArrangeUser(true);
+        var sut = _sut.SignedInAs(callerId == 2 ? 1 : callerId, role);
+
+        var buy = await sut.BuyCrypto(new BuyCryptoDto { UserId = 2, CryptoId = 2, Amount = 1 });
+        var sell = await sut.SellCrypto(new SellCryptoDto { UserId = 2, CryptoId = 2, Amount = 1 });
+
+        Assert.IsType<ForbidResult>(buy);
+        Assert.IsType<ForbidResult>(sell);
+        await _service.DidNotReceive().BuyCrypto(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<decimal>());
+        await _service.DidNotReceive().SellCrypto(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<decimal>());
+    }
+
+    [Fact]
+    public async Task Should_ReturnForbid_When_ReadingAnotherUsersPortfolioData()
+    {
+        ArrangeUser(true);
+
+        Assert.IsType<ForbidResult>((await _sut.GetPortfolio(2)).Result);
+        Assert.IsType<ForbidResult>((await _sut.GetDetailedProfitLoss(2)).Result);
+        Assert.IsType<ForbidResult>((await _sut.GetPortfolioProfitLossSummary(2)).Result);
+    }
+
+    [Fact]
+    public async Task Should_ReturnOk_When_AdminReadsAnotherUsersPortfolioData()
+    {
+        ArrangeUser(true);
+        _service.GetPortfolio(2).Returns(new PortfolioDto());
+        _service.GetDetailedProfitLoss(2).Returns(new List<CryptoProfitLossDto>());
+        _service.GetPortfolioProfitLoss(2).Returns(new PortfolioProfitLossDto());
+        var admin = _sut.SignedInAs(99, "Admin");
+
+        Assert.IsType<OkObjectResult>((await admin.GetPortfolio(2)).Result);
+        Assert.IsType<OkObjectResult>((await admin.GetDetailedProfitLoss(2)).Result);
+        Assert.IsType<OkObjectResult>((await admin.GetPortfolioProfitLossSummary(2)).Result);
+    }
+
+    [Fact]
+    public async Task Should_ReturnNotFound_When_BuyForMissingOtherUser()
+    {
+        ArrangeUser(false);
+
+        var result = await _sut.BuyCrypto(new BuyCryptoDto { UserId = 2, CryptoId = 2, Amount = 1 });
+
+        Assert.IsType<NotFoundObjectResult>(result);
     }
 }

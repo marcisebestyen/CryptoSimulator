@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CryptoSimulator.Data;
 using CryptoSimulator.DTOs;
+using CryptoSimulator.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,6 +36,25 @@ public static class TestApi
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body.Token);
 
         return new TestUser(client, created.Id, username, email, DefaultPassword);
+    }
+
+    // Role is only set in the DB, so the user logs in again to get a token that carries it.
+    public static async Task<TestUser> CreateAdminAsync(ApiFactory factory)
+    {
+        var user = await CreateUserAsync(factory);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CryptoSimulationDbContext>();
+            await db.Users.Where(u => u.Id == user.Id).ExecuteUpdateAsync(s => s.SetProperty(u => u.Role, Role.Admin));
+        }
+
+        var login = await user.Client.PostAsJsonAsync("/api/users/login",
+            new UserLoginDto { Email = user.Email, Password = user.Password });
+        login.EnsureSuccessStatusCode();
+        var body = await login.Content.ReadFromJsonAsync<LoginResponseDto>()
+            ?? throw new InvalidOperationException("Login returned an empty body.");
+        user.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body.Token);
+        return user;
     }
 
     // New crypto has no price log, so a price is set right away to make it tradable.

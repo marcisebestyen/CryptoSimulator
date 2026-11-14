@@ -32,4 +32,16 @@ public class TokenServiceTests
         });
         Assert.True(result.IsValid);
     }
+
+    [Theory]
+    [InlineData(Role.Admin, "Admin")]
+    [InlineData(Role.User, "User")]
+    public void CreateToken_AddsRoleClaim_ForUserRole(Role role, string expected)
+    {
+        var token = new TokenService(Settings).CreateToken(new User { Id = 7, Email = "a@b.com", Role = role });
+
+        var jwt = new JsonWebToken(token);
+
+        Assert.Equal(expected, jwt.Claims.Single(c => c.Type == System.Security.Claims.ClaimTypes.Role).Value);
+    }
 }

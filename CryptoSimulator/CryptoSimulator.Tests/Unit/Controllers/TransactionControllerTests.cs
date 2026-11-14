@@ -13,6 +13,7 @@ public class TransactionControllerTests
 {
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly IRepository<Transactions> _repo = Substitute.For<IRepository<Transactions>>();
+    private readonly IRepository<User> _users = Substitute.For<IRepository<User>>();
     private readonly IMapper _mapper = Substitute.For<IMapper>();
     private readonly ITransactionService _service = Substitute.For<ITransactionService>();
     private readonly TransactionController _sut;
@@ -20,7 +21,8 @@ public class TransactionControllerTests
     public TransactionControllerTests()
     {
         _uow.TransactionRepository.Returns(_repo);
-        _sut = new TransactionController(_uow, _mapper, _service);
+        _uow.UserRepository.Returns(_users);
+        _sut = new TransactionController(_uow, _mapper, _service).SignedInAs();
     }
 
     private void ArrangeTransactions(params Transactions[] items) =>
@@ -30,7 +32,7 @@ public class TransactionControllerTests
     [Fact]
     public async Task Should_ReturnOkWithDto_When_TransactionExists()
     {
-        var tx = new Transactions { Id = 1 };
+        var tx = new Transactions { Id = 1, Wallet = new Wallet { UserId = 1 } };
         var dto = new TransactionsGetDto();
         ArrangeTransactions(tx);
         _mapper.Map<TransactionsGetDto>(tx).Returns(dto);
@@ -80,5 +82,48 @@ public class TransactionControllerTests
         var result = await _sut.GetUserTransactions(1);
 
         Assert.IsType<NotFoundObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Should_ReturnForbid_When_TransactionBelongsToAnotherUser()
+    {
+        ArrangeTransactions(new Transactions { Id = 1, Wallet = new Wallet { UserId = 2 } });
+
+        var result = await _sut.GetTransaction(1);
+
+        Assert.IsType<ForbidResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Should_ReturnOk_When_AdminGetsAnotherUsersTransaction()
+    {
+        var tx = new Transactions { Id = 1, Wallet = new Wallet { UserId = 2 } };
+        ArrangeTransactions(tx);
+        _mapper.Map<TransactionsGetDto>(tx).Returns(new TransactionsGetDto());
+
+        var result = await _sut.SignedInAs(99, "Admin").GetTransaction(1);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Should_ReturnForbid_When_ListingAnotherUsersTransactions()
+    {
+        _users.GetByIdAsync(Arg.Any<object[]>(), Arg.Any<string[]?>(), Arg.Any<string[]?>()).Returns(new User { Id = 2 });
+
+        var result = await _sut.GetUserTransactions(2);
+
+        Assert.IsType<ForbidResult>(result.Result);
+        await _service.DidNotReceive().GetUserTransactionsAsync(Arg.Any<int>(), Arg.Any<bool>());
+    }
+
+    [Fact]
+    public async Task Should_ReturnOk_When_AdminListsAnotherUsersTransactions()
+    {
+        _service.GetUserTransactionsAsync(2, true).Returns(new List<TransactionsGetDto>());
+
+        var result = await _sut.SignedInAs(99, "Admin").GetUserTransactions(2);
+
+        Assert.IsType<OkObjectResult>(result.Result);
     }
 }

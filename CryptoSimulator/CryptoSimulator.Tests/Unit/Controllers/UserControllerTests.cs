@@ -24,7 +24,7 @@ public class UserControllerTests
     public UserControllerTests()
     {
         _uow.UserRepository.Returns(_users);
-        _sut = new UserController(_uow, _mapper, _userService, _tokens);
+        _sut = new UserController(_uow, _mapper, _userService, _tokens).SignedInAs();
     }
 
     private void ArrangeUser(User? user) =>
@@ -249,5 +249,96 @@ public class UserControllerTests
 
         Assert.IsType<NotFoundObjectResult>(result);
         await _users.DidNotReceive().DeleteAsync(Arg.Any<object[]>());
+    }
+
+    [Fact]
+    public async Task Should_ReturnForbid_When_GetUserOfAnotherUser()
+    {
+        ArrangeUser(new User { Id = 2 });
+
+        var result = await _sut.GetUser(2);
+
+        Assert.IsType<ForbidResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Should_ReturnForbid_When_NoCallerIdentity()
+    {
+        ArrangeUser(new User { Id = 1 });
+        var anonymous = new UserController(_uow, _mapper, _userService, _tokens);
+
+        var result = await anonymous.GetUser(1);
+
+        Assert.IsType<ForbidResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Should_ReturnOk_When_AdminGetsAnotherUser()
+    {
+        var user = new User { Id = 2 };
+        ArrangeUser(user);
+        _mapper.Map<UserGetDto>(user).Returns(new UserGetDto { Id = 2 });
+
+        var result = await _sut.SignedInAs(99, "Admin").GetUser(2);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Should_ReturnForbidAndNotSave_When_UpdateAnotherUser()
+    {
+        ArrangeUser(new User { Id = 2 });
+
+        var result = await _sut.UpdateUser(2, new UserPutDto());
+
+        Assert.IsType<ForbidResult>(result.Result);
+        await _uow.DidNotReceive().SaveAsync();
+    }
+
+    [Fact]
+    public async Task Should_ReturnOkAndSave_When_AdminUpdatesAnotherUser()
+    {
+        var user = new User { Id = 2 };
+        ArrangeUser(user);
+        _mapper.Map<UserGetDto>(user).Returns(new UserGetDto { Id = 2 });
+
+        var result = await _sut.SignedInAs(99, "Admin").UpdateUser(2, new UserPutDto());
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        await _uow.Received(1).SaveAsync();
+    }
+
+    [Fact]
+    public async Task Should_ReturnForbidAndNotDelete_When_DeleteAnotherUser()
+    {
+        ArrangeUser(new User { Id = 2 });
+
+        var result = await _sut.DeleteUser(2);
+
+        Assert.IsType<ForbidResult>(result);
+        await _users.DidNotReceive().DeleteAsync(Arg.Any<object[]>());
+    }
+
+    [Fact]
+    public async Task Should_ReturnNoContent_When_AdminDeletesAnotherUser()
+    {
+        ArrangeUser(new User { Id = 2 });
+
+        var result = await _sut.SignedInAs(99, "Admin").DeleteUser(2);
+
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Theory]
+    [InlineData(2, "User")]
+    [InlineData(99, "Admin")]
+    public async Task Should_ReturnForbidAndNotChange_When_ChangePasswordNotOwner(int callerId, string role)
+    {
+        ArrangeUser(new User { Id = 2 });
+
+        var result = await _sut.SignedInAs(callerId == 2 ? 1 : callerId, role).ChangePassword(2, PwDto());
+
+        Assert.IsType<ForbidResult>(result);
+        await _userService.DidNotReceive().ChangePasswordAsync(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>());
     }
 }

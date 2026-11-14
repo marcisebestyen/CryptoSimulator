@@ -124,6 +124,21 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     }
 
     [Fact]
+    public async Task Sell_Returns200AndRemovesHolding_WhenSellingEntireAmount()
+    {
+        var user = await TestApi.CreateUserAsync(Factory);
+        var crypto = await TestApi.CreateCryptoAsync(user.Client, 100m);
+        (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 2m)).EnsureSuccessStatusCode();
+
+        var response = await TestApi.SellAsync(user.Client, user.Id, crypto.Id, 2m);
+        var wallet = await user.Client.GetFromJsonAsync<UserWalletDetailsDto>($"/api/users/{user.Id}/wallet");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(StartBalance, wallet!.FiatBalance);
+        Assert.Empty(wallet.OwnedCryptos);
+    }
+
+    [Fact]
     public async Task Sell_Returns400_WhenInsufficientHoldings()
     {
         var user = await TestApi.CreateUserAsync(Factory);

@@ -25,6 +25,11 @@ namespace CryptoSimulator.Services
 
         public async Task<bool> BuyCrypto(int userId, int cryptoId, decimal amount)
         {
+            if (amount <= 0)
+            {
+                return false;
+            }
+
             var wallet = _unitOfWork.WalletRepository
                 .Get(u => u.UserId == userId)
                 .FirstOrDefault();
@@ -96,6 +101,11 @@ namespace CryptoSimulator.Services
 
         public async Task<bool> SellCrypto(int userId, int cryptoId, decimal amount)
         {
+            if (amount <= 0)
+            {
+                return false;
+            }
+
             var wallet = _unitOfWork.WalletRepository
                 .Get(w => w.UserId == userId)
                 .FirstOrDefault();
@@ -147,7 +157,7 @@ namespace CryptoSimulator.Services
             myCrypto.Amount -= amount;
             if (myCrypto.Amount == 0)
             {
-                await _unitOfWork.MyCryptosRepository.DeleteAsync(myCrypto.CryptoId);
+                await _unitOfWork.MyCryptosRepository.DeleteAsync(myCrypto.WalletId, myCrypto.CryptoId);
             }
             else
             {
