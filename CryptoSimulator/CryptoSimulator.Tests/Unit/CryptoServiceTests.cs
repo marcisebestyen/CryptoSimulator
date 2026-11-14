@@ -9,7 +9,7 @@ using NSubstitute;
 
 namespace CryptoSimulator.Tests.Unit;
 
-// GetAllWithCurrentValueAsync needs a real DbContext query; it belongs to integration tests.
+// GetAllWithCurrentValueAsync and GetCryptoPriceHistoryAsync need a real DbContext query; it belongs to integration tests.
 public class CryptoServiceTests
 {
     private static readonly DateTime Max = new(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc);
@@ -59,6 +59,20 @@ public class CryptoServiceTests
     }
 
     [Fact]
+    public async Task Should_InsertCryptoAndOpenEndedLog_When_AddWithInitialPrice()
+    {
+        var cryptos = Substitute.For<IRepository<Crypto>>();
+        _uow.CryptoRepository.Returns(cryptos);
+        var crypto = new Crypto { Name = "BTC" };
+
+        await Sut().AddWithInitialPriceAsync(crypto, 5m, T0);
+
+        await cryptos.Received(1).InsertAsync(crypto);
+        await _logs.Received(1).InsertAsync(Arg.Is<CryptoLog>(l =>
+            l.Crypto == crypto && l.CurrentValue == 5m && l.From == T0 && l.To == Max));
+    }
+
+    [Fact]
     public async Task Should_OnlyInsert_When_NoPreviousLog()
     {
         var ok = await Sut().UpdateCryptoPriceAsync(5, 7m, T0);
@@ -76,28 +90,5 @@ public class CryptoServiceTests
         await Sut().UpdateCryptoPriceAsync(1, 20m, local);
 
         await _logs.Received(1).InsertAsync(Arg.Is<CryptoLog>(l => l.From.Kind == DateTimeKind.Utc && l.From == local.ToUniversalTime()));
-    }
-
-    [Fact]
-    public async Task Should_ReturnHistoryOrderedByFrom_When_LogsExist()
-    {
-        var repo = RepositoryFakes.WithData(
-            new CryptoLog { CryptoId = 1, CurrentValue = 3m, From = T0.AddDays(2), To = Max },
-            new CryptoLog { CryptoId = 1, CurrentValue = 1m, From = T0, To = T0.AddDays(1) },
-            new CryptoLog { CryptoId = 1, CurrentValue = 2m, From = T0.AddDays(1), To = T0.AddDays(2) },
-            new CryptoLog { CryptoId = 2, CurrentValue = 99m, From = T0, To = Max });
-        _uow.CryptoLogRepository.Returns(repo);
-
-        var history = (await Sut().GetCryptoPriceHistoryAsync(1)).ToList();
-
-        Assert.Equal(new[] { 1m, 2m, 3m }, history.Select(h => h.Value));
-    }
-
-    [Fact]
-    public async Task Should_ReturnEmptyHistory_When_NoLogs()
-    {
-        var history = await Sut().GetCryptoPriceHistoryAsync(42);
-
-        Assert.Empty(history);
     }
 }

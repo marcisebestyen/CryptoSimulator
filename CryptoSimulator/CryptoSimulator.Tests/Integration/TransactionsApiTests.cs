@@ -21,7 +21,7 @@ public class TransactionsApiTests(PostgresFixture postgres) : ApiTestBase(postgr
     public async Task GetUserTransactions_ReturnsNewestFirstByDefault_AfterTrades()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 10m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 10m);
         (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 3m)).EnsureSuccessStatusCode();
         (await TestApi.SellAsync(user.Client, user.Id, crypto.Id, 1m)).EnsureSuccessStatusCode();
 
@@ -69,7 +69,7 @@ public class TransactionsApiTests(PostgresFixture postgres) : ApiTestBase(postgr
     public async Task GetTransaction_Returns200_WhenExists()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 10m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 10m);
         (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 3m)).EnsureSuccessStatusCode();
         var list = await user.Client.GetFromJsonAsync<List<TransactionsGetDto>>($"/api/users/{user.Id}/transactions");
 
@@ -106,7 +106,7 @@ public class TransactionsApiTests(PostgresFixture postgres) : ApiTestBase(postgr
     {
         var a = await TestApi.CreateUserAsync(Factory);
         var b = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(a.Client, 10m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 10m);
         (await TestApi.BuyAsync(b.Client, b.Id, crypto.Id, 1m)).EnsureSuccessStatusCode();
         var list = await b.Client.GetFromJsonAsync<List<TransactionsGetDto>>($"/api/users/{b.Id}/transactions");
 

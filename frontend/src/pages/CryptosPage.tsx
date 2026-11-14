@@ -1,23 +1,46 @@
-import { Alert, Button, Stack, Text, Title } from '@mantine/core'
+import { ActionIcon, Alert, Anchor, Button, Flex, Group, Stack, Text, Title, Tooltip } from '@mantine/core'
+import { IconEdit, IconTrash } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { MantineReactTable, useMantineReactTable, type MRT_ColumnDef } from 'mantine-react-table'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router'
+import { useAuth } from '../auth/useAuth'
 import { ApiError } from '../api/client'
 import { fetchCryptos, type Crypto } from '../api/cryptos'
+import { PRICE_REFRESH_MS } from '../api/polling'
+import { CryptoFormModal } from './CryptoFormModal'
+import { DeleteCryptoModal } from './DeleteCryptoModal'
+
+type Dialog = { type: 'add' } | { type: 'edit'; crypto: Crypto } | { type: 'delete'; crypto: Crypto } | null
 
 const formatRate = (rate: number) => rate.toLocaleString(undefined, { maximumFractionDigits: 8 })
 
 export function CryptosPage() {
-  const { data, isLoading, error, refetch } = useQuery({ queryKey: ['cryptos'], queryFn: fetchCryptos })
+  const { isAdmin } = useAuth()
+  const [dialog, setDialog] = useState<Dialog>(null)
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['cryptos'],
+    queryFn: fetchCryptos,
+    refetchInterval: PRICE_REFRESH_MS,
+  })
 
   const columns = useMemo<MRT_ColumnDef<Crypto>[]>(
     () => [
-      { accessorKey: 'id', header: 'Id', size: 80 },
       { accessorKey: 'name', header: 'Name' },
       {
         accessorKey: 'currentExchangeRate',
         header: 'Exchange rate',
         Cell: ({ cell }) => formatRate(cell.getValue<number>()),
+      },
+      {
+        id: 'history',
+        header: 'History',
+        enableSorting: false,
+        Cell: ({ row }) => (
+          <Anchor component={Link} to={`/cryptos/${row.original.id}/price-history`}>
+            Price history
+          </Anchor>
+        ),
       },
     ],
     [],
@@ -27,8 +50,34 @@ export function CryptosPage() {
     columns,
     data: data ?? [],
     enablePagination: true,
-    enableRowSelection: true,
     state: { isLoading },
+    enableRowActions: isAdmin,
+    positionActionsColumn: 'first',
+    displayColumnDefOptions: { 'mrt-row-actions': { header: 'Actions' } },
+    renderRowActions: ({ row }) => (
+      <Flex gap="xs">
+        <Tooltip label="Edit">
+          <ActionIcon
+            variant="subtle"
+            aria-label={`Edit ${row.original.name}`}
+            onClick={() => setDialog({ type: 'edit', crypto: row.original })}
+          >
+            <IconEdit size={18} />
+          </ActionIcon>
+        </Tooltip>
+        <Tooltip label="Delete">
+          <ActionIcon
+            variant="subtle"
+            color="red"
+            aria-label={`Delete ${row.original.name}`}
+            onClick={() => setDialog({ type: 'delete', crypto: row.original })}
+          >
+            <IconTrash size={18} />
+          </ActionIcon>
+        </Tooltip>
+      </Flex>
+    ),
+    getRowId: (crypto) => String(crypto.id),
     mantinePaperProps: { withBorder: true, style: { backgroundColor: 'var(--grid-body-bg)' } },
     mantineTableProps: {
       withTableBorder: true,
@@ -37,12 +86,16 @@ export function CryptosPage() {
       striped: false,
       highlightOnHover: true,
     },
-    mantineTableBodyRowProps: ({ row }) => ({
-      onClick: row.getToggleSelectedHandler(),
-      className: row.getIsSelected() ? 'row-selected' : undefined,
-      style: { cursor: 'pointer' },
-    }),
     mantineTopToolbarProps: { className: 'grid-toolbar' },
+    renderTopToolbarCustomActions: isAdmin
+      ? () => (
+          <Group>
+            <Button size="xs" onClick={() => setDialog({ type: 'add' })}>
+              Add
+            </Button>
+          </Group>
+        )
+      : undefined,
     mantineTableHeadCellProps: { className: 'grid-head-cell' },
     renderEmptyRowsFallback: () => <Text ta="center" p="md">No cryptos yet.</Text>,
   })
@@ -61,6 +114,9 @@ export function CryptosPage() {
         </Alert>
       )}
       <MantineReactTable table={table} />
+      {dialog?.type === 'add' && <CryptoFormModal crypto={null} onClose={() => setDialog(null)} />}
+      {dialog?.type === 'edit' && <CryptoFormModal crypto={dialog.crypto} onClose={() => setDialog(null)} />}
+      {dialog?.type === 'delete' && <DeleteCryptoModal crypto={dialog.crypto} onClose={() => setDialog(null)} />}
     </Stack>
   )
 }

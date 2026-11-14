@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using CryptoSimulator.Data;
 using CryptoSimulator.DTOs;
+using CryptoSimulator.Entities;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CryptoSimulator.Tests.Integration;
 
@@ -13,7 +16,7 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Buy_Returns200AndMovesFundsToHoldings_WhenAffordable()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 100m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
 
         var response = await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 2m);
         var wallet = await user.Client.GetFromJsonAsync<UserWalletDetailsDto>($"/api/users/{user.Id}/wallet");
@@ -29,7 +32,7 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Buy_Returns400_WhenInsufficientFunds()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 100m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
 
         var response = await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 11m);
         var wallet = await user.Client.GetFromJsonAsync<UserWalletDetailsDto>($"/api/users/{user.Id}/wallet");
@@ -44,7 +47,7 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Buy_Returns400_WhenAmountNotPositive(double amount)
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 100m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
 
         var response = await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, (decimal)amount);
 
@@ -65,8 +68,13 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Buy_Returns400_WhenCryptoHasNoPrice()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var created = await user.Client.PostAsJsonAsync("/api/cryptos", new CryptoPostDto { Name = $"coin-{Guid.NewGuid():N}" });
-        var crypto = (await created.Content.ReadFromJsonAsync<CryptoGetDto>())!;
+        var crypto = new Crypto { Name = $"coin-{Guid.NewGuid():N}" };
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CryptoSimulationDbContext>();
+            db.Cryptos.Add(crypto);
+            await db.SaveChangesAsync();
+        }
 
         var response = await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 1m);
 
@@ -77,7 +85,7 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Buy_Returns404_WhenUserMissing()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 100m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
 
         var response = await TestApi.BuyAsync(user.Client, 2000000000, crypto.Id, 1m);
 
@@ -99,7 +107,7 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     {
         var a = await TestApi.CreateUserAsync(Factory);
         var b = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(a.Client, 100m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
 
         var response = await TestApi.BuyAsync(a.Client, b.Id, crypto.Id, 1m);
 
@@ -110,9 +118,10 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Sell_Returns200AndCreditsFiat_WhenHoldingsSufficient()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 100m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
         (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 4m)).EnsureSuccessStatusCode();
-        (await user.Client.PutAsJsonAsync($"/api/cryptos/{crypto.Id}/price", new ManualPriceUpdateDto { NewPrice = 150m }))
+        var admin = await TestApi.CreateAdminAsync(Factory);
+        (await admin.Client.PutAsJsonAsync($"/api/cryptos/{crypto.Id}/price", new ManualPriceUpdateDto { NewPrice = 150m }))
             .EnsureSuccessStatusCode();
 
         var response = await TestApi.SellAsync(user.Client, user.Id, crypto.Id, 1m);
@@ -127,7 +136,7 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Sell_Returns200AndRemovesHolding_WhenSellingEntireAmount()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 100m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
         (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 2m)).EnsureSuccessStatusCode();
 
         var response = await TestApi.SellAsync(user.Client, user.Id, crypto.Id, 2m);
@@ -142,7 +151,7 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Sell_Returns400_WhenInsufficientHoldings()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 100m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
         (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 1m)).EnsureSuccessStatusCode();
 
         var response = await TestApi.SellAsync(user.Client, user.Id, crypto.Id, 2m);
@@ -154,7 +163,7 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Sell_Returns400_WhenNothingOwned()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 100m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
 
         var response = await TestApi.SellAsync(user.Client, user.Id, crypto.Id, 1m);
 
@@ -167,7 +176,7 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Sell_Returns400_WhenAmountNotPositive(double amount)
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 100m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
         (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 1m)).EnsureSuccessStatusCode();
 
         var response = await TestApi.SellAsync(user.Client, user.Id, crypto.Id, (decimal)amount);
@@ -189,7 +198,7 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task Portfolio_ReturnsHoldingsAndTotals_AfterBuy()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 50m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 50m);
         (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 4m)).EnsureSuccessStatusCode();
 
         var response = await user.Client.GetAsync($"/api/users/{user.Id}/portfolio");
@@ -238,9 +247,10 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task ProfitLoss_ReturnsGainPerCrypto_WhenPriceRose()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 100m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
         (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 2m)).EnsureSuccessStatusCode();
-        (await user.Client.PutAsJsonAsync($"/api/cryptos/{crypto.Id}/price", new ManualPriceUpdateDto { NewPrice = 150m }))
+        var admin = await TestApi.CreateAdminAsync(Factory);
+        (await admin.Client.PutAsJsonAsync($"/api/cryptos/{crypto.Id}/price", new ManualPriceUpdateDto { NewPrice = 150m }))
             .EnsureSuccessStatusCode();
 
         var response = await user.Client.GetAsync($"/api/users/{user.Id}/portfolio/profit-loss");
@@ -268,9 +278,10 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     public async Task ProfitLossSummary_ReturnsTotals_WhenPriceRose()
     {
         var user = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(user.Client, 100m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
         (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 2m)).EnsureSuccessStatusCode();
-        (await user.Client.PutAsJsonAsync($"/api/cryptos/{crypto.Id}/price", new ManualPriceUpdateDto { NewPrice = 150m }))
+        var admin = await TestApi.CreateAdminAsync(Factory);
+        (await admin.Client.PutAsJsonAsync($"/api/cryptos/{crypto.Id}/price", new ManualPriceUpdateDto { NewPrice = 150m }))
             .EnsureSuccessStatusCode();
 
         var response = await user.Client.GetAsync($"/api/users/{user.Id}/portfolio/profit-loss/summary");

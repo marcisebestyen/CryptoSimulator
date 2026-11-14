@@ -61,7 +61,7 @@ public class AdminAccessApiTests(PostgresFixture postgres) : ApiTestBase(postgre
     {
         var admin = await TestApi.CreateAdminAsync(Factory);
         var other = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(other.Client, 10m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 10m);
         (await TestApi.BuyAsync(other.Client, other.Id, crypto.Id, 1m)).EnsureSuccessStatusCode();
         var list = await other.Client.GetFromJsonAsync<List<TransactionsGetDto>>($"/api/users/{other.Id}/transactions");
 
@@ -91,7 +91,7 @@ public class AdminAccessApiTests(PostgresFixture postgres) : ApiTestBase(postgre
     {
         var admin = await TestApi.CreateAdminAsync(Factory);
         var other = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(admin.Client, 10m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 10m);
 
         var buy = await TestApi.BuyAsync(admin.Client, other.Id, crypto.Id, 1m);
         var sell = await TestApi.SellAsync(admin.Client, other.Id, crypto.Id, 1m);
@@ -105,7 +105,7 @@ public class AdminAccessApiTests(PostgresFixture postgres) : ApiTestBase(postgre
     {
         var admin = await TestApi.CreateAdminAsync(Factory);
         var other = await TestApi.CreateUserAsync(Factory);
-        var crypto = await TestApi.CreateCryptoAsync(admin.Client, 10m);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 10m);
         var created = await other.Client.PostAsJsonAsync("/api/alerts", NewAlert(other.Id, crypto.Id));
         var alert = (await created.Content.ReadFromJsonAsync<PriceAlertGetDto>())!;
 

@@ -57,19 +57,20 @@ public static class TestApi
         return user;
     }
 
-    // New crypto has no price log, so a price is set right away to make it tradable.
+    // Writing cryptos is admin-only, so this signs up a throwaway admin to do it.
+    public static async Task<CryptoGetDto> CreateCryptoAsync(ApiFactory factory, decimal price)
+    {
+        var admin = await CreateAdminAsync(factory);
+        return await CreateCryptoAsync(admin.Client, price);
+    }
+
     public static async Task<CryptoGetDto> CreateCryptoAsync(HttpClient client, decimal price)
     {
         var create = await client.PostAsJsonAsync("/api/cryptos",
-            new CryptoPostDto { Name = $"coin-{Guid.NewGuid():N}" });
+            new CryptoPostDto { Name = $"coin-{Guid.NewGuid():N}", InitialPrice = price });
         create.EnsureSuccessStatusCode();
-        var crypto = await create.Content.ReadFromJsonAsync<CryptoGetDto>()
+        return await create.Content.ReadFromJsonAsync<CryptoGetDto>()
             ?? throw new InvalidOperationException("Create crypto returned an empty body.");
-
-        var set = await client.PutAsJsonAsync($"/api/cryptos/{crypto.Id}/price",
-            new ManualPriceUpdateDto { NewPrice = price });
-        set.EnsureSuccessStatusCode();
-        return crypto;
     }
 
     public static async Task<int> GetWalletIdAsync(ApiFactory factory, int userId)

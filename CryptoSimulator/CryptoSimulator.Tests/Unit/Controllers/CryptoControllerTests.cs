@@ -128,13 +128,14 @@ public class CryptoControllerTests
         _mapper.Map<Crypto>(Arg.Any<CryptoPostDto>()).Returns(crypto);
         _mapper.Map<CryptoGetDto>(crypto).Returns(dto);
 
-        var result = await _sut.CreateCrypto(new CryptoPostDto { Name = "BTC" });
+        var result = await _sut.CreateCrypto(new CryptoPostDto { Name = "BTC", InitialPrice = 5m });
 
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         Assert.Equal(nameof(CryptoController.GetCrypto), created.ActionName);
         Assert.Equal(4, created.RouteValues!["cryptoId"]);
         Assert.Same(dto, created.Value);
-        await _cryptos.Received(1).InsertAsync(crypto);
+        await _service.Received(1).AddWithInitialPriceAsync(crypto, 5m,
+            Arg.Is<DateTime>(d => d.Kind == DateTimeKind.Utc));
         await _uow.Received(1).SaveAsync();
     }
 
@@ -162,15 +163,60 @@ public class CryptoControllerTests
     }
 
     [Fact]
-    public async Task Should_ReturnHistory_When_CryptoExists()
+    public async Task Should_ReturnPagedHistory_When_CryptoExists()
     {
-        var history = new List<CryptoPriceHistoryDto>();
+        var history = new PagedResult<CryptoPriceHistoryDto>(new List<CryptoPriceHistoryDto>(), 0, 2, 10);
         ArrangeCrypto(new Crypto { Id = 1 });
-        _service.GetCryptoPriceHistoryAsync(1).Returns(history);
+        _service.GetCryptoPriceHistoryAsync(1, 2, 10).Returns(history);
 
-        var result = await _sut.GetCryptoPriceHistory(1);
+        var result = await _sut.GetCryptoPriceHistory(1, 2, 10);
 
         Assert.Same(history, Assert.IsType<OkObjectResult>(result.Result).Value);
+    }
+
+    [Fact]
+    public async Task Should_UseDefaultPaging_When_HistoryDefaultsUsed()
+    {
+        ArrangeCrypto(new Crypto { Id = 1 });
+
+        await _sut.GetCryptoPriceHistory(1);
+
+        await _service.Received(1).GetCryptoPriceHistoryAsync(1, 1, 25);
+    }
+
+    [Fact]
+    public async Task Should_CapPageSizeAt100_When_HistoryPageSizeTooLarge()
+    {
+        ArrangeCrypto(new Crypto { Id = 1 });
+
+        await _sut.GetCryptoPriceHistory(1, 1, 500);
+
+        await _service.Received(1).GetCryptoPriceHistoryAsync(1, 1, 100);
+    }
+
+    [Theory]
+    [InlineData(0, 25)]
+    [InlineData(-1, 25)]
+    [InlineData(1, 0)]
+    [InlineData(1, -5)]
+    public async Task Should_ReturnBadRequest_When_HistoryPagingInvalid(int page, int pageSize)
+    {
+        ArrangeCrypto(new Crypto { Id = 1 });
+
+        var result = await _sut.GetCryptoPriceHistory(1, page, pageSize);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        await _service.DidNotReceive().GetCryptoPriceHistoryAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task Should_ReturnBadRequest_NotNotFound_When_HistoryPagingInvalidAndCryptoMissing()
+    {
+        ArrangeCrypto(null);
+
+        var result = await _sut.GetCryptoPriceHistory(1, 0, 25);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     [Fact]
@@ -181,6 +227,57 @@ public class CryptoControllerTests
         var result = await _sut.GetCryptoPriceHistory(1);
 
         Assert.IsType<NotFoundObjectResult>(result.Result);
-        await _service.DidNotReceive().GetCryptoPriceHistoryAsync(Arg.Any<int>());
+        await _service.DidNotReceive().GetCryptoPriceHistoryAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task Should_ReturnConflictAndNotInsert_When_CreateNameTaken()
+    {
+        _service.IsNameTakenAsync("BTC").Returns(true);
+
+        var result = await _sut.CreateCrypto(new CryptoPostDto { Name = "BTC", InitialPrice = 5m });
+
+        Assert.IsType<ConflictObjectResult>(result.Result);
+        await _service.DidNotReceive().AddWithInitialPriceAsync(Arg.Any<Crypto>(), Arg.Any<decimal>(), Arg.Any<DateTime>());
+        await _uow.DidNotReceive().SaveAsync();
+    }
+
+    [Fact]
+    public async Task Should_RenameAndSave_When_RenameCryptoValid()
+    {
+        var crypto = new Crypto { Id = 1, Name = "Old" };
+        ArrangeCrypto(crypto);
+
+        var result = await _sut.RenameCrypto(1, new CryptoPutDto { Name = "New" });
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Equal("New", crypto.Name);
+        await _cryptos.Received(1).UpdateAsync(crypto);
+        await _uow.Received(1).SaveAsync();
+    }
+
+    [Fact]
+    public async Task Should_ReturnNotFound_When_RenameCryptoMissing()
+    {
+        ArrangeCrypto(null);
+
+        var result = await _sut.RenameCrypto(1, new CryptoPutDto { Name = "New" });
+
+        Assert.IsType<NotFoundObjectResult>(result);
+        await _uow.DidNotReceive().SaveAsync();
+    }
+
+    [Fact]
+    public async Task Should_ReturnConflictAndKeepName_When_RenameNameTakenByOther()
+    {
+        var crypto = new Crypto { Id = 1, Name = "Old" };
+        ArrangeCrypto(crypto);
+        _service.IsNameTakenAsync("New", 1).Returns(true);
+
+        var result = await _sut.RenameCrypto(1, new CryptoPutDto { Name = "New" });
+
+        Assert.IsType<ConflictObjectResult>(result);
+        Assert.Equal("Old", crypto.Name);
+        await _uow.DidNotReceive().SaveAsync();
     }
 }

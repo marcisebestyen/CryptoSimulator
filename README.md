@@ -82,6 +82,19 @@ Users may only touch their own data. Foreign data returns `403`; a missing user,
 
 - Owner or `Admin`: `GET/PUT/DELETE /api/users/{id}`, `PUT/DELETE /api/wallets/{id}`, `GET /api/transactions/{id}`, and the `GET /api/users/{id}/...` routes (wallet, portfolio, profit-loss, profit-loss/summary, transactions, alerts, alerts/history).
 - Owner only (an admin gets `403`): `POST /api/users/{id}/change-password`, `POST /api/trades/buy` and `/sell` (body `userId`), `POST /api/alerts` (body `userId`) and `DELETE /api/alerts/{id}`.
+- `Admin` only (a normal user gets `403`): `POST /api/cryptos`, `PUT /api/cryptos/{id}` (rename), `PUT /api/cryptos/{id}/price` and `DELETE /api/cryptos/{id}`. Every logged-in user may `GET` cryptos and their price history.
+
+### Cryptos
+
+- `POST /api/cryptos` takes `{ "name": "...", "initialPrice": 10.5 }`. `initialPrice` is required and must be at least `0.01` (`400` otherwise); it is saved as the first open-ended price record, so the crypto shows up in `GET /api/cryptos` right away. `PUT /api/cryptos/{id}` (rename) takes `{ "name": "..." }` and returns `204`, or `404` for an unknown crypto. For both, a name already used by another crypto (case-insensitive) returns `409`.
+- `GET /api/cryptos/{id}/price-history?page=1&pageSize=25` returns the price records newest first:
+
+  ```json
+  { "items": [ { "...": "..." } ], "totalCount": 120, "page": 1, "pageSize": 25 }
+  ```
+
+  `page` starts at 1 and `pageSize` defaults to 25. A `pageSize` above 100 is capped at 100 and the response shows the capped value. `page` or `pageSize` below 1 returns `400`; an unknown crypto returns `404`.
+  **Breaking change:** this route used to return a plain array of all records.
 
 ### Validation (`400`)
 

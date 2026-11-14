@@ -31,7 +31,7 @@ public class PriceUpdateServiceTests
             .AddSingleton(_cryptoService)
             .AddSingleton(_alerts)
             .BuildServiceProvider();
-        _sut = new PriceUpdateService(provider, NullLogger<PriceUpdateService>.Instance);
+        _sut = new PriceUpdateService(provider, new PriceSimulator(new SystemRandomSource()), NullLogger<PriceUpdateService>.Instance);
     }
 
     private void ArrangeLog(decimal? value) =>
@@ -60,14 +60,14 @@ public class PriceUpdateServiceTests
     }
 
     [Fact]
-    public async Task Should_KeepNewPriceWithinOnePercent_When_CurrentPriceKnown()
+    public async Task Should_KeepNewPriceWithinQuarter_When_CurrentPriceKnown()
     {
         ArrangeUpdate(true);
 
         await RunAsync();
 
         await _cryptoService.Received(1).UpdateCryptoPriceAsync(1,
-            Arg.Is<decimal>(p => p >= 99m && p <= 101m), Arg.Any<DateTime>());
+            Arg.Is<decimal>(p => p >= 75m && p <= 125m), Arg.Any<DateTime>());
     }
 
     [Fact]
