@@ -1,15 +1,17 @@
-import { ActionIcon, Alert, Anchor, Button, Flex, Group, Stack, Text, Title, Tooltip } from '@mantine/core'
-import { IconEdit, IconTrash } from '@tabler/icons-react'
+import { ActionIcon, Alert, Button, Flex, Group, Stack, Text, Title, Tooltip } from '@mantine/core'
+import { IconArrowRight, IconEdit, IconTrash } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { MantineReactTable, useMantineReactTable, type MRT_ColumnDef } from 'mantine-react-table'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { ApiError } from '../api/client'
 import { fetchCryptos, type Crypto } from '../api/cryptos'
 import { PRICE_REFRESH_MS } from '../api/polling'
+import { CoinBadge } from './CoinBadge'
 import { CryptoFormModal } from './CryptoFormModal'
 import { DeleteCryptoModal } from './DeleteCryptoModal'
+import { usePersistedTableState } from './usePersistedTableState'
 
 type Dialog = { type: 'add' } | { type: 'edit'; crypto: Crypto } | { type: 'delete'; crypto: Crypto } | null
 
@@ -24,9 +26,21 @@ export function CryptosPage() {
     refetchInterval: PRICE_REFRESH_MS,
   })
 
+  const { pagination, globalFilter, onPaginationChange, onGlobalFilterChange } =
+    usePersistedTableState('cryptos-table')
+
   const columns = useMemo<MRT_ColumnDef<Crypto>[]>(
     () => [
-      { accessorKey: 'name', header: 'Name' },
+      {
+        accessorKey: 'name',
+        header: 'Name',
+        Cell: ({ row }) => (
+          <Group gap="sm">
+            <CoinBadge name={row.original.name} />
+            <Text fw={600}>{row.original.name}</Text>
+          </Group>
+        ),
+      },
       {
         accessorKey: 'currentExchangeRate',
         header: 'Exchange rate',
@@ -37,9 +51,15 @@ export function CryptosPage() {
         header: 'History',
         enableSorting: false,
         Cell: ({ row }) => (
-          <Anchor component={Link} to={`/cryptos/${row.original.id}/price-history`}>
+          <Button
+            component={Link}
+            to={`/cryptos/${row.original.id}/price-history`}
+            variant="light"
+            size="xs"
+            rightSection={<IconArrowRight size={14} />}
+          >
             Price history
-          </Anchor>
+          </Button>
         ),
       },
     ],
@@ -50,7 +70,14 @@ export function CryptosPage() {
     columns,
     data: data ?? [],
     enablePagination: true,
-    state: { isLoading },
+    enableGlobalFilter: true,
+    autoResetPageIndex: false,
+    positionGlobalFilter: 'right',
+    onPaginationChange,
+    onGlobalFilterChange,
+    initialState: { showGlobalFilter: true },
+    mantineSearchTextInputProps: { placeholder: 'Search assets...', 'aria-label': 'Search' },
+    state: { isLoading, pagination, globalFilter },
     enableRowActions: isAdmin,
     positionActionsColumn: 'first',
     displayColumnDefOptions: { 'mrt-row-actions': { header: 'Actions' } },
@@ -99,6 +126,16 @@ export function CryptosPage() {
     mantineTableHeadCellProps: { className: 'grid-head-cell' },
     renderEmptyRowsFallback: () => <Text ta="center" p="md">No cryptos yet.</Text>,
   })
+
+  const rowCount = table.getFilteredRowModel().rows.length
+  const lastPageIndex = Math.max(0, Math.ceil(rowCount / pagination.pageSize) - 1)
+  const isLoaded = data !== undefined
+  useEffect(() => {
+    // A saved page can vanish when rows are removed; wait for data so we do not reset it while loading.
+    if (isLoaded && pagination.pageIndex > lastPageIndex) {
+      onPaginationChange({ ...pagination, pageIndex: lastPageIndex })
+    }
+  }, [isLoaded, lastPageIndex, pagination, onPaginationChange])
 
   return (
     <Stack>

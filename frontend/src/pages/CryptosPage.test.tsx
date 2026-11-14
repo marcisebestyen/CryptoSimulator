@@ -15,6 +15,7 @@ const url = `http://localhost:3000${endpoints.cryptos}`
 describe('CryptosPage', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
     loginAsValidUser()
   })
 
@@ -59,6 +60,42 @@ describe('CryptosPage', () => {
     expect(screen.queryByRole('columnheader', { name: /^Id/ })).not.toBeInTheDocument()
   })
 
+  describe('search', () => {
+    const list = [
+      { id: 1, name: 'Bitcoin', currentExchangeRate: 100 },
+      { id: 2, name: 'Ether', currentExchangeRate: 5 },
+    ]
+
+    it('filters rows by name using the search box', async () => {
+      server.use(http.get(url, () => HttpResponse.json(list)))
+      renderApp('/cryptos')
+      await screen.findByText('Bitcoin')
+
+      await userEvent.setup().type(screen.getByRole('textbox', { name: 'Search' }), 'eth')
+
+      await waitFor(() => expect(screen.queryByText('Bitcoin')).not.toBeInTheDocument())
+      expect(screen.getByText('Ether')).toBeInTheDocument()
+    })
+
+    it('shows the empty fallback when search matches nothing', async () => {
+      server.use(http.get(url, () => HttpResponse.json(list)))
+      renderApp('/cryptos')
+      await screen.findByText('Bitcoin')
+
+      await userEvent.setup().type(screen.getByRole('textbox', { name: 'Search' }), 'zzz')
+
+      expect(await screen.findByText('No cryptos yet.')).toBeInTheDocument()
+    })
+
+    it('price history link is still reachable per row', async () => {
+      server.use(http.get(url, () => HttpResponse.json(list)))
+      renderApp('/cryptos')
+
+      const links = await screen.findAllByRole('link', { name: 'Price history' })
+      expect(links[0]).toHaveAttribute('href', '/cryptos/1/price-history')
+    })
+  })
+
   it('shows an empty state for an empty list', async () => {
     server.use(http.get(url, () => HttpResponse.json([])))
     renderApp('/cryptos')
@@ -90,6 +127,90 @@ describe('CryptosPage', () => {
     renderApp('/cryptos')
 
     expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument()
+  })
+
+  describe('remembered table state', () => {
+    const many = Array.from({ length: 15 }, (_, i) => ({
+      id: i + 1,
+      name: `Coin${String(i + 1).padStart(2, '0')}`,
+      currentExchangeRate: i + 1,
+    }))
+
+    const historyEmpty = { items: [], totalCount: 0, page: 1, pageSize: 10 }
+
+    beforeEach(() => {
+      server.use(
+        http.get(`http://localhost:3000${endpoints.crypto(1)}`, () => HttpResponse.json(many[0])),
+        http.get(`http://localhost:3000${endpoints.cryptoPriceHistory(1)}`, () => HttpResponse.json(historyEmpty)),
+      )
+    })
+
+    async function goToPageTwo(user: ReturnType<typeof userEvent.setup>) {
+      await screen.findByText('Coin01')
+      await user.click(screen.getByRole('button', { name: 'Go to next page' }))
+      expect(await screen.findByText('Coin11')).toBeInTheDocument()
+    }
+
+    it('keeps the page after opening price history and going back', async () => {
+      server.use(http.get(url, () => HttpResponse.json(many)))
+      renderApp('/cryptos')
+      const user = userEvent.setup()
+      await goToPageTwo(user)
+
+      await user.click(screen.getAllByRole('link', { name: 'Price history' })[0])
+      await user.click(await screen.findByRole('link', { name: 'Back to cryptos' }))
+
+      expect(await screen.findByText('Coin11')).toBeInTheDocument()
+      expect(screen.queryByText('Coin01')).not.toBeInTheDocument()
+    })
+
+    it('keeps the page when the list refetches', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      try {
+        let calls = 0
+        server.use(
+          http.get(url, () => {
+            calls += 1
+            return HttpResponse.json(many)
+          }),
+        )
+        renderApp('/cryptos')
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+        await goToPageTwo(user)
+
+        await act(() => vi.advanceTimersByTimeAsync(PRICE_REFRESH_MS))
+        await waitFor(() => expect(calls).toBeGreaterThan(1))
+
+        expect(screen.getByText('Coin11')).toBeInTheDocument()
+        expect(screen.queryByText('Coin01')).not.toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('search text is remembered after going back', async () => {
+      server.use(http.get(url, () => HttpResponse.json(many)))
+      renderApp('/cryptos')
+      const user = userEvent.setup()
+      await screen.findByText('Coin01')
+
+      await user.type(screen.getByRole('textbox', { name: 'Search' }), 'Coin07')
+      await waitFor(() => expect(screen.queryByText('Coin01')).not.toBeInTheDocument())
+      await user.click(screen.getByRole('link', { name: 'Price history' }))
+      await user.click(await screen.findByRole('link', { name: 'Back to cryptos' }))
+
+      expect(await screen.findByRole('textbox', { name: 'Search' })).toHaveValue('Coin07')
+      expect(screen.getByText('Coin07')).toBeInTheDocument()
+      expect(screen.queryByText('Coin01')).not.toBeInTheDocument()
+    })
+
+    it('clamps to the last page when the saved page no longer exists', async () => {
+      sessionStorage.setItem('cryptos-table', JSON.stringify({ pageIndex: 5, pageSize: 10, globalFilter: '' }))
+      server.use(http.get(url, () => HttpResponse.json(many)))
+      renderApp('/cryptos')
+
+      expect(await screen.findByText('Coin11')).toBeInTheDocument()
+    })
   })
 
   describe('admin controls', () => {

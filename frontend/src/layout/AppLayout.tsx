@@ -35,7 +35,13 @@ export function AppLayout() {
             active={pathname === '/profile'}
             style={{ borderRadius: 'var(--mantine-radius-default)' }}
           />
-          <Button variant="subtle" fullWidth className="logout-button" leftSection={<IconLogout size={18} />} onClick={signOut}
+          <Button
+            variant="subtle"
+            fullWidth
+            justify="flex-start"
+            className="logout-button"
+            leftSection={<IconLogout size={18} />}
+            onClick={signOut}
           >
             Log out
           </Button>
