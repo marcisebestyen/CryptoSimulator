@@ -70,6 +70,12 @@ In Swagger UI use the Authorize button and paste the token.
 
 The token carries the user id (`nameidentifier`), email and a role claim (`Admin` or `User`).
 
+### CORS
+
+Browsers may only call the API from origins listed in `Cors:AllowedOrigins` (a string array; startup fails if it is empty).
+`appsettings.Development.json` allows `http://localhost:5173` (the Vite dev server). For any other environment set
+`Cors__AllowedOrigins__0`, `Cors__AllowedOrigins__1`, ... Allowed headers are `Authorization` and `Content-Type`.
+
 ### Access rules
 
 Users may only touch their own data. Foreign data returns `403`; a missing user, wallet, transaction or alert returns `404`.

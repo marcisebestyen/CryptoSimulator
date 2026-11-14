@@ -40,7 +40,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
         };
     });
-builder.Services.AddEndpointsApiExplorer(); 
+// CORS: only the configured frontend origins may call the API from a browser
+var allowedOrigins = (builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
+    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+    .ToArray();
+if (allowedOrigins.Length == 0)
+{
+    throw new InvalidOperationException(
+        "Cors:AllowedOrigins is missing. Set it in appsettings or via Cors__AllowedOrigins__0.");
+}
+builder.Services.AddCors(options =>
+    options.AddPolicy("Frontend", policy => policy
+        .WithOrigins(allowedOrigins)
+        .WithHeaders("Authorization", "Content-Type")
+        .AllowAnyMethod()));
+builder.Services.AddEndpointsApiExplorer();
 // Swagger registration
 builder.Services.AddSwaggerGen(c =>
 {
@@ -90,6 +104,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("Frontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
