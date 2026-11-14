@@ -19,7 +19,7 @@ const formatTo = (iso: string) => (isOpenEnded(iso) ? 'Current' : formatDate(iso
 
 export function PriceHistoryPage() {
   const cryptoId = Number(useParams().cryptoId)
-  const [pagination, setPagination] = useState<MRT_PaginationState>({ pageIndex: 0, pageSize: 25 })
+  const [pagination, setPagination] = useState<MRT_PaginationState>({ pageIndex: 0, pageSize: 10 })
 
   const crypto = useQuery({ queryKey: ['crypto', cryptoId], queryFn: () => fetchCrypto(cryptoId) })
   const history = useQuery({
@@ -59,7 +59,7 @@ export function PriceHistoryPage() {
     rowCount: history.data?.totalCount ?? 0,
     onPaginationChange: setPagination,
     state: { isLoading: history.isLoading, pagination },
-    mantinePaginationProps: { rowsPerPageOptions: ['25', '50', '100'] },
+    mantinePaginationProps: { rowsPerPageOptions: ['10', '25', '50', '100'] },
     mantinePaperProps: { withBorder: true, style: { backgroundColor: 'var(--grid-body-bg)' } },
     mantineTableProps: { withTableBorder: true, withColumnBorders: true, withRowBorders: true, striped: false },
     mantineTableHeadCellProps: { className: 'grid-head-cell' },

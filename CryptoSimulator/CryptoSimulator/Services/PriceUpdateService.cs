@@ -6,13 +6,15 @@ namespace CryptoSimulator.Services
     public class PriceUpdateService : BackgroundService
     {
         private readonly IServiceProvider _serviceProvider;
+        private readonly PriceSimulator _priceSimulator;
         private readonly ILogger<PriceUpdateService> _logger;
         private readonly TimeSpan _updateInterval = TimeSpan.FromSeconds(45);
         private static readonly DateTime MaxDateTimeValue = new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc);
 
-        public PriceUpdateService(IServiceProvider serviceProvider, ILogger<PriceUpdateService> logger)
+        public PriceUpdateService(IServiceProvider serviceProvider, PriceSimulator priceSimulator, ILogger<PriceUpdateService> logger)
         {
             _serviceProvider = serviceProvider;
+            _priceSimulator = priceSimulator;
             _logger = logger;
         }
 
@@ -71,7 +73,7 @@ namespace CryptoSimulator.Services
 
                     try
                     {
-                        decimal newPrice = GenerateNewPriceExample(await GetCurrentPrice(unitOfWork, crypto.Id));
+                        decimal newPrice = _priceSimulator.NextPrice(crypto.Id, await GetCurrentPrice(unitOfWork, crypto.Id));
                         DateTime updateTimestamp = DateTime.UtcNow;
                         bool processed = await cryptoService.UpdateCryptoPriceAsync(crypto.Id, newPrice, updateTimestamp);
 
@@ -99,15 +101,6 @@ namespace CryptoSimulator.Services
         {
             var log = (await unitOfWork.CryptoLogRepository.GetAsync(cl => cl.CryptoId == cryptoId && cl.To == MaxDateTimeValue, null)).FirstOrDefault();
             return log?.CurrentValue ?? 0m;
-        }
-
-        private decimal GenerateNewPriceExample(decimal currentPrice)
-        {
-            var random = new Random();
-            decimal percentageChange = (decimal)(random.NextDouble() * 0.02 - 0.01);
-            decimal newPrice = currentPrice * (1 + percentageChange);
-
-            return Math.Max(0.01m, Math.Round(newPrice, 2));
         }
     }
 }

@@ -83,6 +83,8 @@ builder.Services.AddSwaggerGen(c =>
 });
 // Service registrations
 builder.Services.AddScoped<ICryptoService, CryptoService>();
+builder.Services.AddSingleton<IRandomSource, SystemRandomSource>();
+builder.Services.AddSingleton<PriceSimulator>();
 builder.Services.AddHostedService<PriceUpdateService>();
 builder.Services.AddScoped<IPriceAlertService, PriceAlertService>();
 builder.Services.AddScoped<ITradeService, TradeService>();

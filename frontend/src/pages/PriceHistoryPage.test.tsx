@@ -26,18 +26,18 @@ describe('PriceHistoryPage', () => {
     server.use(http.get(cryptoUrl, () => HttpResponse.json({ id: 1, name: 'Bitcoin' })))
   })
 
-  it('shows crypto name and first 25 records', async () => {
+  it('shows crypto name and first 10 records', async () => {
     server.use(
       http.get(historyUrl, () =>
-        HttpResponse.json({ items: makeItems(25), totalCount: 60, page: 1, pageSize: 25 }),
+        HttpResponse.json({ items: makeItems(10), totalCount: 60, page: 1, pageSize: 10 }),
       ),
     )
     renderApp('/cryptos/1/price-history')
 
     expect(await screen.findByRole('heading', { name: /Bitcoin/ })).toBeInTheDocument()
     expect(await screen.findByText('1,000')).toBeInTheDocument()
-    expect(screen.getByText('1,024')).toBeInTheDocument()
-    expect(screen.getAllByRole('row')).toHaveLength(26)
+    expect(screen.getByText('1,009')).toBeInTheDocument()
+    expect(screen.getAllByRole('row')).toHaveLength(11)
     expect(screen.getByRole('link', { name: /back/i })).toHaveAttribute('href', '/cryptos')
   })
 
@@ -46,14 +46,14 @@ describe('PriceHistoryPage', () => {
     server.use(
       http.get(historyUrl, ({ request }) => {
         const params = new URL(request.url).searchParams
-        if (params.get('pageSize') !== '25') return HttpResponse.json({ items: [], totalCount: 0, page: 1, pageSize: 100 })
+        if (params.get('pageSize') !== '10') return HttpResponse.json({ items: [], totalCount: 0, page: 1, pageSize: 100 })
         requested.push(`${params.get('page')}:${params.get('pageSize')}`)
         const page = Number(params.get('page'))
         return HttpResponse.json({
-          items: makeItems(25, (page - 1) * 25),
+          items: makeItems(10, (page - 1) * 10),
           totalCount: 60,
           page,
-          pageSize: 25,
+          pageSize: 10,
         })
       }),
     )
@@ -63,8 +63,8 @@ describe('PriceHistoryPage', () => {
     await screen.findByText('1,000')
     await user.click(screen.getByRole('button', { name: /next page/i }))
 
-    expect(await screen.findByText('1,025')).toBeInTheDocument()
-    expect(requested).toEqual(['1:25', '2:25'])
+    expect(await screen.findByText('1,010')).toBeInTheDocument()
+    expect(requested).toEqual(['1:10', '2:10'])
   })
 
   it('shows Current for open-ended record', async () => {
