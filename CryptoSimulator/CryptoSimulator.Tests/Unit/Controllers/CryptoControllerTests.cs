@@ -162,15 +162,60 @@ public class CryptoControllerTests
     }
 
     [Fact]
-    public async Task Should_ReturnHistory_When_CryptoExists()
+    public async Task Should_ReturnPagedHistory_When_CryptoExists()
     {
-        var history = new List<CryptoPriceHistoryDto>();
+        var history = new PagedResult<CryptoPriceHistoryDto>(new List<CryptoPriceHistoryDto>(), 0, 2, 10);
         ArrangeCrypto(new Crypto { Id = 1 });
-        _service.GetCryptoPriceHistoryAsync(1).Returns(history);
+        _service.GetCryptoPriceHistoryAsync(1, 2, 10).Returns(history);
 
-        var result = await _sut.GetCryptoPriceHistory(1);
+        var result = await _sut.GetCryptoPriceHistory(1, 2, 10);
 
         Assert.Same(history, Assert.IsType<OkObjectResult>(result.Result).Value);
+    }
+
+    [Fact]
+    public async Task Should_UseDefaultPaging_When_HistoryDefaultsUsed()
+    {
+        ArrangeCrypto(new Crypto { Id = 1 });
+
+        await _sut.GetCryptoPriceHistory(1);
+
+        await _service.Received(1).GetCryptoPriceHistoryAsync(1, 1, 25);
+    }
+
+    [Fact]
+    public async Task Should_CapPageSizeAt100_When_HistoryPageSizeTooLarge()
+    {
+        ArrangeCrypto(new Crypto { Id = 1 });
+
+        await _sut.GetCryptoPriceHistory(1, 1, 500);
+
+        await _service.Received(1).GetCryptoPriceHistoryAsync(1, 1, 100);
+    }
+
+    [Theory]
+    [InlineData(0, 25)]
+    [InlineData(-1, 25)]
+    [InlineData(1, 0)]
+    [InlineData(1, -5)]
+    public async Task Should_ReturnBadRequest_When_HistoryPagingInvalid(int page, int pageSize)
+    {
+        ArrangeCrypto(new Crypto { Id = 1 });
+
+        var result = await _sut.GetCryptoPriceHistory(1, page, pageSize);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        await _service.DidNotReceive().GetCryptoPriceHistoryAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task Should_ReturnBadRequest_NotNotFound_When_HistoryPagingInvalidAndCryptoMissing()
+    {
+        ArrangeCrypto(null);
+
+        var result = await _sut.GetCryptoPriceHistory(1, 0, 25);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 
     [Fact]
@@ -181,7 +226,7 @@ public class CryptoControllerTests
         var result = await _sut.GetCryptoPriceHistory(1);
 
         Assert.IsType<NotFoundObjectResult>(result.Result);
-        await _service.DidNotReceive().GetCryptoPriceHistoryAsync(Arg.Any<int>());
+        await _service.DidNotReceive().GetCryptoPriceHistoryAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>());
     }
 
     [Fact]

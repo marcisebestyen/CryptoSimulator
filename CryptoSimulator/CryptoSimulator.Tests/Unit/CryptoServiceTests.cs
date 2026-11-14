@@ -9,7 +9,7 @@ using NSubstitute;
 
 namespace CryptoSimulator.Tests.Unit;
 
-// GetAllWithCurrentValueAsync needs a real DbContext query; it belongs to integration tests.
+// GetAllWithCurrentValueAsync and GetCryptoPriceHistoryAsync need a real DbContext query; it belongs to integration tests.
 public class CryptoServiceTests
 {
     private static readonly DateTime Max = new(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc);
@@ -76,28 +76,5 @@ public class CryptoServiceTests
         await Sut().UpdateCryptoPriceAsync(1, 20m, local);
 
         await _logs.Received(1).InsertAsync(Arg.Is<CryptoLog>(l => l.From.Kind == DateTimeKind.Utc && l.From == local.ToUniversalTime()));
-    }
-
-    [Fact]
-    public async Task Should_ReturnHistoryOrderedByFrom_When_LogsExist()
-    {
-        var repo = RepositoryFakes.WithData(
-            new CryptoLog { CryptoId = 1, CurrentValue = 3m, From = T0.AddDays(2), To = Max },
-            new CryptoLog { CryptoId = 1, CurrentValue = 1m, From = T0, To = T0.AddDays(1) },
-            new CryptoLog { CryptoId = 1, CurrentValue = 2m, From = T0.AddDays(1), To = T0.AddDays(2) },
-            new CryptoLog { CryptoId = 2, CurrentValue = 99m, From = T0, To = Max });
-        _uow.CryptoLogRepository.Returns(repo);
-
-        var history = (await Sut().GetCryptoPriceHistoryAsync(1)).ToList();
-
-        Assert.Equal(new[] { 1m, 2m, 3m }, history.Select(h => h.Value));
-    }
-
-    [Fact]
-    public async Task Should_ReturnEmptyHistory_When_NoLogs()
-    {
-        var history = await Sut().GetCryptoPriceHistoryAsync(42);
-
-        Assert.Empty(history);
     }
 }

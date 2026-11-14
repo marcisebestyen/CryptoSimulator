@@ -11,7 +11,7 @@ namespace CryptoSimulator.Services
     {
         Task<IEnumerable<CryptoGetWithCurrentValueDto>> GetAllWithCurrentValueAsync();
         Task<bool> UpdateCryptoPriceAsync(int cryptoId, decimal newPrice, DateTime updateTimestamp);
-        Task<IEnumerable<CryptoPriceHistoryDto>> GetCryptoPriceHistoryAsync(int cryptoId);
+        Task<PagedResult<CryptoPriceHistoryDto>> GetCryptoPriceHistoryAsync(int cryptoId, int page, int pageSize);
         Task<bool> IsNameTakenAsync(string name, int? excludeCryptoId = null);
     }
 
@@ -83,13 +83,22 @@ namespace CryptoSimulator.Services
             return true;
         }
 
-        public async Task<IEnumerable<CryptoPriceHistoryDto>> GetCryptoPriceHistoryAsync(int cryptoId)
+        public async Task<PagedResult<CryptoPriceHistoryDto>> GetCryptoPriceHistoryAsync(int cryptoId, int page, int pageSize)
         {
-            var historyLogs = await _unitOfWork.CryptoLogRepository.GetAsync(cl => cl.CryptoId == cryptoId);
-            var orderedHistoryLogs = historyLogs.OrderBy(cl => cl.From);
+            var query = _context.CryptoLogs.AsNoTracking().Where(cl => cl.CryptoId == cryptoId);
 
-            var historyDtos = _mapper.Map<IEnumerable<CryptoPriceHistoryDto>>(orderedHistoryLogs);
-            return historyDtos;
+            var totalCount = await query.CountAsync();
+            // long math: (page - 1) * pageSize can overflow int for a huge page number.
+            var offset = (long)(page - 1) * pageSize;
+            var logs = offset >= totalCount
+                ? new List<CryptoLog>()
+                : await query
+                    .OrderByDescending(cl => cl.From)
+                    .Skip((int)offset)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+            return new PagedResult<CryptoPriceHistoryDto>(_mapper.Map<List<CryptoPriceHistoryDto>>(logs), totalCount, page, pageSize);
         }
     }
 }

@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using CryptoSimulator.Data;
 using CryptoSimulator.DTOs;
+using CryptoSimulator.Entities;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CryptoSimulator.Tests.Integration;
 
@@ -117,7 +120,7 @@ public class CryptosApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     }
 
     [Fact]
-    public async Task PriceHistory_ReturnsLogsOldestFirst_AfterUpdates()
+    public async Task PriceHistory_ReturnsNewestFirst()
     {
         var client = (await TestApi.CreateAdminAsync(Factory)).Client;
         var crypto = await TestApi.CreateCryptoAsync(client, 10m);
@@ -127,10 +130,117 @@ public class CryptosApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         var response = await client.GetAsync($"/api/cryptos/{crypto.Id}/price-history");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var history = await response.Content.ReadFromJsonAsync<List<CryptoPriceHistoryDto>>();
-        Assert.NotNull(history);
-        Assert.Equal(new[] { 10m, 30m }, history.Select(h => h.Value).ToArray());
-        Assert.True(history[0].To <= history[1].From);
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<CryptoPriceHistoryDto>>();
+        Assert.NotNull(page);
+        Assert.Equal(new[] { 30m, 10m }, page.Items.Select(h => h.Value).ToArray());
+        Assert.True(page.Items[1].To <= page.Items[0].From);
+        Assert.Equal(2, page.TotalCount);
+    }
+
+    [Fact]
+    public async Task PriceHistory_Returns25_ByDefault_WithTotalCount()
+    {
+        var client = (await TestApi.CreateAdminAsync(Factory)).Client;
+        var crypto = await TestApi.CreateCryptoAsync(client, 1m);
+        await SeedHistoryAsync(crypto.Id, 29);
+
+        var page = await client.GetFromJsonAsync<PagedResult<CryptoPriceHistoryDto>>($"/api/cryptos/{crypto.Id}/price-history");
+
+        Assert.NotNull(page);
+        Assert.Equal(25, page.Items.Count);
+        Assert.Equal(30, page.TotalCount);
+        Assert.Equal(1, page.Page);
+        Assert.Equal(25, page.PageSize);
+    }
+
+    [Fact]
+    public async Task PriceHistory_Page2_ReturnsRemaining()
+    {
+        var client = (await TestApi.CreateAdminAsync(Factory)).Client;
+        var crypto = await TestApi.CreateCryptoAsync(client, 1m);
+        await SeedHistoryAsync(crypto.Id, 29);
+
+        var page = await client.GetFromJsonAsync<PagedResult<CryptoPriceHistoryDto>>(
+            $"/api/cryptos/{crypto.Id}/price-history?page=2");
+
+        Assert.NotNull(page);
+        Assert.Equal(5, page.Items.Count);
+        Assert.Equal(30, page.TotalCount);
+        Assert.Equal(2, page.Page);
+        Assert.Equal(new[] { 6m, 5m, 4m, 3m, 2m }, page.Items.Select(h => h.Value).ToArray());
+    }
+
+    [Theory]
+    [InlineData(99)]
+    [InlineData(int.MaxValue)]
+    public async Task PriceHistory_ReturnsEmptyItems_When_PageBeyondRange(int pageNumber)
+    {
+        var client = (await TestApi.CreateAdminAsync(Factory)).Client;
+        var crypto = await TestApi.CreateCryptoAsync(client, 1m);
+        await SeedHistoryAsync(crypto.Id, 29);
+
+        var response = await client.GetAsync($"/api/cryptos/{crypto.Id}/price-history?page={pageNumber}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<CryptoPriceHistoryDto>>();
+        Assert.NotNull(page);
+        Assert.Empty(page.Items);
+        Assert.Equal(30, page.TotalCount);
+        Assert.Equal(pageNumber, page.Page);
+    }
+
+    [Fact]
+    public async Task PriceHistory_CapsPageSizeAt100()
+    {
+        var client = (await TestApi.CreateAdminAsync(Factory)).Client;
+        var crypto = await TestApi.CreateCryptoAsync(client, 1m);
+        await SeedHistoryAsync(crypto.Id, 104);
+
+        var page = await client.GetFromJsonAsync<PagedResult<CryptoPriceHistoryDto>>(
+            $"/api/cryptos/{crypto.Id}/price-history?pageSize=500");
+
+        Assert.NotNull(page);
+        Assert.Equal(100, page.Items.Count);
+        Assert.Equal(100, page.PageSize);
+        Assert.Equal(105, page.TotalCount);
+    }
+
+    // (page - 1) * pageSize = 4294967300, which wraps to 4 in int math and would return real rows.
+    [Fact]
+    public async Task PriceHistory_ReturnsEmptyItems_When_OffsetOverflowsInt()
+    {
+        var client = (await TestApi.CreateAdminAsync(Factory)).Client;
+        var crypto = await TestApi.CreateCryptoAsync(client, 1m);
+        await SeedHistoryAsync(crypto.Id, 29);
+
+        var page = await client.GetFromJsonAsync<PagedResult<CryptoPriceHistoryDto>>(
+            $"/api/cryptos/{crypto.Id}/price-history?page=42949674&pageSize=100");
+
+        Assert.NotNull(page);
+        Assert.Empty(page.Items);
+        Assert.Equal(30, page.TotalCount);
+    }
+
+    [Fact]
+    public async Task PriceHistory_Returns400_When_PageIsZero()
+    {
+        var client = (await TestApi.CreateAdminAsync(Factory)).Client;
+        var crypto = await TestApi.CreateCryptoAsync(client, 1m);
+
+        var response = await client.GetAsync($"/api/cryptos/{crypto.Id}/price-history?page=0");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PriceHistory_Returns400_When_PageSizeIsZero()
+    {
+        var client = (await TestApi.CreateAdminAsync(Factory)).Client;
+        var crypto = await TestApi.CreateCryptoAsync(client, 1m);
+
+        var response = await client.GetAsync($"/api/cryptos/{crypto.Id}/price-history?pageSize=0");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -141,6 +251,23 @@ public class CryptosApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         var response = await client.GetAsync("/api/cryptos/2000000000/price-history");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    // Adds old closed logs, so the crypto ends up with extraLogs + its current log.
+    private async Task SeedHistoryAsync(int cryptoId, int extraLogs)
+    {
+        var start = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var logs = Enumerable.Range(0, extraLogs).Select(i => new CryptoLog
+        {
+            CryptoId = cryptoId,
+            CurrentValue = i + 2,
+            From = start.AddMinutes(i),
+            To = start.AddMinutes(i + 1)
+        });
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CryptoSimulationDbContext>();
+        db.CryptoLogs.AddRange(logs);
+        await db.SaveChangesAsync();
     }
 
     [Fact]

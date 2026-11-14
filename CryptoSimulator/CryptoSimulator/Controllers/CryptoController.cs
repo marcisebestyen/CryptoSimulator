@@ -13,6 +13,8 @@ namespace CryptoSimulator.Controllers
     [Route("api/cryptos")]
     public class CryptoController : ControllerBase
     {
+        private const int MaxHistoryPageSize = 100;
+
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICryptoService _cryptoService;
@@ -141,17 +143,23 @@ namespace CryptoSimulator.Controllers
         }
 
         [HttpGet("{cryptoId:int}/price-history")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<CryptoPriceHistoryDto>))]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PagedResult<CryptoPriceHistoryDto>))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<CryptoPriceHistoryDto>>> GetCryptoPriceHistory(int cryptoId)
+        public async Task<ActionResult<PagedResult<CryptoPriceHistoryDto>>> GetCryptoPriceHistory(int cryptoId, [FromQuery] int page = 1, [FromQuery] int pageSize = 25)
         {
+            if (page < 1 || pageSize < 1)
+            {
+                return BadRequest("page and pageSize must be at least 1.");
+            }
+
             var cryptoExist = await _unitOfWork.CryptoRepository.GetByIdAsync(new object[] { cryptoId });
             if (cryptoExist == null)
             {
                 return NotFound($"Crypto with ID {cryptoId} not found.");
             }
 
-            var history = await _cryptoService.GetCryptoPriceHistoryAsync(cryptoId);
+            var history = await _cryptoService.GetCryptoPriceHistoryAsync(cryptoId, page, Math.Min(pageSize, MaxHistoryPageSize));
             return Ok(history);
         }
     }
