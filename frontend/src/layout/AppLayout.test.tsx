@@ -20,6 +20,38 @@ describe('AppLayout', () => {
     expect(await screen.findByRole('link', { name: 'Cryptos' })).toBeInTheDocument()
   })
 
+  it('shows Market and Transactions links with the right hrefs', async () => {
+    renderApp('/cryptos')
+
+    expect(await screen.findByRole('link', { name: 'Market' })).toHaveAttribute('href', '/market')
+    expect(screen.getByRole('link', { name: 'Transactions' })).toHaveAttribute(
+      'href',
+      '/market/transactions',
+    )
+  })
+
+  it('marks only the Transactions link active on the transactions page', async () => {
+    renderApp('/market/transactions')
+
+    const transactions = await screen.findByRole('link', { name: 'Transactions' })
+    expect(transactions).toHaveAttribute('data-active', 'true')
+    expect(screen.getByRole('link', { name: 'Market' })).not.toHaveAttribute('data-active')
+  })
+
+  it('navigates to the market and transactions pages from the sidebar', async () => {
+    renderApp('/cryptos')
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('link', { name: 'Market' }))
+    expect(await screen.findByRole('link', { name: 'Market' })).toHaveAttribute('data-active', 'true')
+
+    await user.click(screen.getByRole('link', { name: 'Transactions' }))
+    expect(await screen.findByRole('link', { name: 'Transactions' })).toHaveAttribute(
+      'data-active',
+      'true',
+    )
+  })
+
   it('shows the app name in the sidebar', async () => {
     renderApp('/cryptos')
 

@@ -11,7 +11,6 @@ public class AdminAccessApiTests(PostgresFixture postgres) : ApiTestBase(postgre
 
     [Theory]
     [InlineData("")]
-    [InlineData("/wallet")]
     [InlineData("/portfolio")]
     [InlineData("/portfolio/profit-loss")]
     [InlineData("/portfolio/profit-loss/summary")]

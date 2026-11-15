@@ -1,18 +1,19 @@
 import { DonutChart } from '@mantine/charts'
 import { Badge, Box, Card, Group, Progress, Stack, Text, Title } from '@mantine/core'
-import type { OwnedCrypto } from '../api/users'
+import type { PortfolioItem } from '../api/trades'
 import { formatAmount, formatMoney, sharePercent, sortByValue, toSlices, totalValue } from './holdings'
+import { cardStyle } from './marketFormat'
 
 const CHART_SIZE = 220
 
-export function HoldingsSection({ holdings }: { holdings: OwnedCrypto[] }) {
+export function HoldingsSection({ holdings }: { holdings: PortfolioItem[] }) {
   const sorted = sortByValue(holdings)
   const slices = toSlices(sorted)
   const total = totalValue(holdings)
   const coins = `${holdings.length} ${holdings.length === 1 ? 'coin' : 'coins'}`
 
   return (
-    <Card withBorder style={{ backgroundColor: 'var(--surface-raised)', borderColor: 'var(--grid-line-color)' }}>
+    <Card withBorder style={cardStyle}>
       <Title order={3} mb="md">Allocation</Title>
       {holdings.length === 0 ? (
         <Text>You do not own any crypto yet.</Text>
@@ -36,7 +37,7 @@ export function HoldingsSection({ holdings }: { holdings: OwnedCrypto[] }) {
                       <Badge circle size="xs" color={color} />
                       <Text fw={600}>{holding.cryptoName}</Text>
                     </Group>
-                    <Text size="sm" c="dimmed">{formatAmount(holding.amount)}</Text>
+                    <Text size="sm" c="dimmed">{formatAmount(holding.amountOwned)}</Text>
                     <Text fw={600}>{formatMoney(holding.currentValue)}</Text>
                   </Group>
                   <Group gap="sm" wrap="nowrap">

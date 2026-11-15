@@ -24,7 +24,8 @@ describe('CryptosPage', () => {
     renderApp('/cryptos')
 
     expect(await screen.findByText('Bitcoin')).toBeInTheDocument()
-    expect(screen.getByText((43250.5).toLocaleString(undefined, { maximumFractionDigits: 8 }))).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'All Cryptos' })).toBeInTheDocument()
+    expect(screen.getByText(`$${(43250.5).toLocaleString(undefined, { maximumFractionDigits: 8 })}`)).toBeInTheDocument()
   })
 
   describe('polling', () => {
@@ -44,11 +45,11 @@ describe('CryptosPage', () => {
         }),
       )
       renderApp('/cryptos')
-      expect(await screen.findByText('100')).toBeInTheDocument()
+      expect(await screen.findByText('$100')).toBeInTheDocument()
 
       await act(() => vi.advanceTimersByTimeAsync(PRICE_REFRESH_MS))
 
-      expect(await screen.findByText('250')).toBeInTheDocument()
+      expect(await screen.findByText('$250')).toBeInTheDocument()
     })
   })
 

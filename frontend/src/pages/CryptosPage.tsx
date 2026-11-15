@@ -8,9 +8,10 @@ import { useAuth } from '../auth/useAuth'
 import { ApiError } from '../api/client'
 import { fetchCryptos, type Crypto } from '../api/cryptos'
 import { PRICE_REFRESH_MS } from '../api/polling'
-import { CoinBadge } from './CoinBadge'
+import { Coin } from './Coin'
 import { CryptoFormModal } from './CryptoFormModal'
 import { DeleteCryptoModal } from './DeleteCryptoModal'
+import { marketTableProps } from './marketTableProps'
 import { usePersistedTableState } from './usePersistedTableState'
 
 type Dialog = { type: 'add' } | { type: 'edit'; crypto: Crypto } | { type: 'delete'; crypto: Crypto } | null
@@ -34,17 +35,14 @@ export function CryptosPage() {
       {
         accessorKey: 'name',
         header: 'Name',
-        Cell: ({ row }) => (
-          <Group gap="sm">
-            <CoinBadge name={row.original.name} />
-            <Text fw={600}>{row.original.name}</Text>
-          </Group>
-        ),
+        Cell: ({ row }) => <Coin name={row.original.name} />,
       },
       {
         accessorKey: 'currentExchangeRate',
         header: 'Exchange rate',
-        Cell: ({ cell }) => formatRate(cell.getValue<number>()),
+        mantineTableHeadCellProps: { align: 'right' },
+        mantineTableBodyCellProps: { align: 'right' },
+        Cell: ({ cell }) => `$${formatRate(cell.getValue<number>())}`,
       },
       {
         id: 'history',
@@ -105,25 +103,17 @@ export function CryptosPage() {
       </Flex>
     ),
     getRowId: (crypto) => String(crypto.id),
-    mantinePaperProps: { withBorder: true, style: { backgroundColor: 'var(--grid-body-bg)' } },
-    mantineTableProps: {
-      withTableBorder: true,
-      withColumnBorders: true,
-      withRowBorders: true,
-      striped: false,
-      highlightOnHover: true,
-    },
-    mantineTopToolbarProps: { className: 'grid-toolbar' },
-    renderTopToolbarCustomActions: isAdmin
-      ? () => (
-          <Group>
-            <Button size="xs" onClick={() => setDialog({ type: 'add' })}>
-              Add
-            </Button>
-          </Group>
-        )
-      : undefined,
-    mantineTableHeadCellProps: { className: 'grid-head-cell' },
+    ...marketTableProps,
+    renderTopToolbarCustomActions: () => (
+      <Group>
+        <Title order={3}>All Cryptos</Title>
+        {isAdmin && (
+          <Button size="xs" color="teal" variant="light" onClick={() => setDialog({ type: 'add' })}>
+            Add
+          </Button>
+        )}
+      </Group>
+    ),
     renderEmptyRowsFallback: () => <Text ta="center" p="md">No cryptos yet.</Text>,
   })
 

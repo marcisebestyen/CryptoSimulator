@@ -19,13 +19,13 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
 
         var response = await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 2m);
-        var wallet = await user.Client.GetFromJsonAsync<UserWalletDetailsDto>($"/api/users/{user.Id}/wallet");
+        var portfolio = await user.Client.GetFromJsonAsync<PortfolioDto>($"/api/users/{user.Id}/portfolio");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(StartBalance - 200m, wallet!.FiatBalance);
-        var owned = Assert.Single(wallet.OwnedCryptos);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(StartBalance - 200m, portfolio!.FiatBalance);
+        var owned = Assert.Single(portfolio.Holdings);
         Assert.Equal(crypto.Id, owned.CryptoId);
-        Assert.Equal(2m, owned.Amount);
+        Assert.Equal(2m, owned.AmountOwned);
     }
 
     [Fact]
@@ -35,10 +35,10 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
 
         var response = await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 11m);
-        var wallet = await user.Client.GetFromJsonAsync<UserWalletDetailsDto>($"/api/users/{user.Id}/wallet");
+        var portfolio = await user.Client.GetFromJsonAsync<PortfolioDto>($"/api/users/{user.Id}/portfolio");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal(StartBalance, wallet!.FiatBalance);
+        Assert.Equal(StartBalance, portfolio!.FiatBalance);
     }
 
     [Theory]
@@ -125,11 +125,11 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
             .EnsureSuccessStatusCode();
 
         var response = await TestApi.SellAsync(user.Client, user.Id, crypto.Id, 1m);
-        var wallet = await user.Client.GetFromJsonAsync<UserWalletDetailsDto>($"/api/users/{user.Id}/wallet");
+        var portfolio = await user.Client.GetFromJsonAsync<PortfolioDto>($"/api/users/{user.Id}/portfolio");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(StartBalance - 400m + 150m, wallet!.FiatBalance);
-        Assert.Equal(3m, Assert.Single(wallet.OwnedCryptos).Amount);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(StartBalance - 400m + 150m, portfolio!.FiatBalance);
+        Assert.Equal(3m, Assert.Single(portfolio.Holdings).AmountOwned);
     }
 
     [Fact]
@@ -140,11 +140,11 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 2m)).EnsureSuccessStatusCode();
 
         var response = await TestApi.SellAsync(user.Client, user.Id, crypto.Id, 2m);
-        var wallet = await user.Client.GetFromJsonAsync<UserWalletDetailsDto>($"/api/users/{user.Id}/wallet");
+        var portfolio = await user.Client.GetFromJsonAsync<PortfolioDto>($"/api/users/{user.Id}/portfolio");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(StartBalance, wallet!.FiatBalance);
-        Assert.Empty(wallet.OwnedCryptos);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(StartBalance, portfolio!.FiatBalance);
+        Assert.Empty(portfolio.Holdings);
     }
 
     [Fact]

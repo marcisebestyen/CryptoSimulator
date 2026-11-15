@@ -45,8 +45,9 @@ describe('PriceHistoryPage', () => {
 
     expect(await screen.findByRole('heading', { name: /Bitcoin/ })).toBeInTheDocument()
     const table = await screen.findByRole('table')
-    expect(await within(table).findByText('1,000')).toBeInTheDocument()
-    expect(within(table).getByText('1,009')).toBeInTheDocument()
+    expect(await within(table).findByText('$1,000')).toBeInTheDocument()
+    expect(within(table).getByText('$1,009')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Price History' })).toBeInTheDocument()
     expect(screen.getAllByRole('row')).toHaveLength(11)
     expect(screen.getByRole('link', { name: /back/i })).toHaveAttribute('href', '/cryptos')
   })
@@ -70,10 +71,10 @@ describe('PriceHistoryPage', () => {
     renderApp('/cryptos/1/price-history')
     const user = userEvent.setup()
 
-    await screen.findByText('1,000')
+    await screen.findByText('$1,000')
     await user.click(screen.getByRole('button', { name: /next page/i }))
 
-    expect(await screen.findByText('1,010')).toBeInTheDocument()
+    expect(await screen.findByText('$1,010')).toBeInTheDocument()
     expect(requested).toEqual(['1:10', '2:10'])
   })
 

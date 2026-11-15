@@ -51,3 +51,20 @@ body {
 .mrt-table tbody tr:hover td {
   background-color: var(--row-hover-bg);
 }
+
+/* Market tables (Cryptos, Price history): Market look (no column lines, card background, dimmed headers). */
+.mrt-table.market-table :is(th, td):not(:last-child) {
+  border-inline-end: none;
+}
+
+.mrt-table.market-table tbody td {
+  background-color: transparent;
+}
+
+.mrt-table.market-table tbody tr:hover td {
+  background-color: var(--row-hover-bg);
+}
+
+.mrt-table.market-table th {
+  color: var(--mantine-color-dimmed);
+}

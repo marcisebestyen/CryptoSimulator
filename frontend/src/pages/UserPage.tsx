@@ -1,22 +1,16 @@
-import { Alert, Card, Group, Loader, SimpleGrid, Stack, Text } from '@mantine/core'
+import { Alert, Group, Loader, SimpleGrid, Stack } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { fetchUser, fetchWallet } from '../api/users'
+import { fetchPortfolio, fetchProfitLoss, fetchProfitLossSummary } from '../api/trades'
+import { fetchUser } from '../api/users'
 import { useAuth } from '../auth/useAuth'
 import { EditProfileModal } from './EditProfileModal'
 import { errorMessage } from './errorMessage'
 import { HoldingsSection } from './HoldingsSection'
-import { formatMoney, totalValue } from './holdings'
+import { formatMoney } from './holdings'
 import { ProfileHeader } from './ProfileHeader'
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <Card withBorder style={{ backgroundColor: 'var(--surface-raised)', borderColor: 'var(--grid-line-color)' }}>
-      <Text size="sm" c="dimmed">{label}</Text>
-      <Text fz="1.75rem" fw={700}>{formatMoney(value)}</Text>
-    </Card>
-  )
-}
+import { ProfitLossSection } from './ProfitLossSection'
+import { StatCard } from './StatCard'
 
 export function UserPage() {
   const { userId } = useAuth()
@@ -25,12 +19,18 @@ export function UserPage() {
   const enabled = userId !== null
   const id = userId ?? 0
   const userQuery = useQuery({ queryKey: ['user', id], queryFn: () => fetchUser(id), enabled })
-  const walletQuery = useQuery({ queryKey: ['wallet', id], queryFn: () => fetchWallet(id), enabled })
+  const portfolioQuery = useQuery({ queryKey: ['portfolio', id], queryFn: () => fetchPortfolio(id), enabled })
+  const profitLossQuery = useQuery({ queryKey: ['profit-loss', id], queryFn: () => fetchProfitLoss(id), enabled })
+  const summaryQuery = useQuery({
+    queryKey: ['profit-loss-summary', id],
+    queryFn: () => fetchProfitLossSummary(id),
+    enabled,
+  })
 
   if (!enabled) return <Alert color="red">Could not determine the signed-in user.</Alert>
 
-  const wallet = walletQuery.data
-  const holdingsTotal = wallet ? totalValue(wallet.ownedCryptos) : 0
+  const portfolio = portfolioQuery.data
+  const profitLossError = profitLossQuery.error ?? summaryQuery.error
 
   return (
     <Stack>
@@ -56,25 +56,39 @@ export function UserPage() {
         </>
       )}
 
-      {walletQuery.isLoading && (
+      {portfolioQuery.isLoading && (
         <Group>
-          <Loader size="sm" aria-label="Loading wallet" />
+          <Loader size="sm" aria-label="Loading portfolio" />
         </Group>
       )}
-      {walletQuery.error && (
-        <Alert color="red" title="Could not load wallet">
-          {errorMessage(walletQuery.error)}
+      {portfolioQuery.error && (
+        <Alert color="red" title="Could not load portfolio">
+          {errorMessage(portfolioQuery.error)}
         </Alert>
       )}
-      {wallet && (
+      {portfolio && (
         <>
           <SimpleGrid cols={{ base: 1, sm: 3 }}>
-            <Stat label="Fiat balance" value={wallet.fiatBalance} />
-            <Stat label="Holdings value" value={holdingsTotal} />
-            <Stat label="Total worth" value={wallet.fiatBalance + holdingsTotal} />
+            <StatCard label="Fiat balance">{formatMoney(portfolio.fiatBalance)}</StatCard>
+            <StatCard label="Holdings value">{formatMoney(portfolio.totalCryptoValue)}</StatCard>
+            <StatCard label="Total worth">{formatMoney(portfolio.totalPortfolioValue)}</StatCard>
           </SimpleGrid>
-          <HoldingsSection holdings={wallet.ownedCryptos} />
+          <HoldingsSection holdings={portfolio.holdings} />
         </>
+      )}
+
+      {(profitLossQuery.isLoading || summaryQuery.isLoading) && (
+        <Group>
+          <Loader size="sm" aria-label="Loading profit and loss" />
+        </Group>
+      )}
+      {profitLossError && (
+        <Alert color="red" title="Could not load profit and loss">
+          {errorMessage(profitLossError)}
+        </Alert>
+      )}
+      {profitLossQuery.data && summaryQuery.data && (
+        <ProfitLossSection summary={summaryQuery.data} rows={profitLossQuery.data} />
       )}
     </Stack>
   )

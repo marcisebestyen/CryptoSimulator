@@ -44,7 +44,7 @@ public class TradeControllerTests
 
         var result = await _sut.BuyCrypto(new BuyCryptoDto { UserId = 1, CryptoId = 2, Amount = 3m });
 
-        Assert.Equal("Crypto purchased successfully", Assert.IsType<OkObjectResult>(result).Value);
+        Assert.IsType<NoContentResult>(result);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class TradeControllerTests
 
         var result = await _sut.SellCrypto(new SellCryptoDto { UserId = 1, CryptoId = 2, Amount = 3m });
 
-        Assert.Equal("Crypto sold successfully", Assert.IsType<OkObjectResult>(result).Value);
+        Assert.IsType<NoContentResult>(result);
     }
 
     [Fact]

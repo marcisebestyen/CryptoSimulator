@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using CryptoSimulator.DTOs;
 using CryptoSimulator.Repositories;
-using CryptoSimulator.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,36 +13,11 @@ namespace CryptoSimulator.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        private readonly IWalletService _walletService;
 
-        public WalletController(IUnitOfWork unitOfWork, IMapper mapper, IWalletService walletService) : base(unitOfWork)
+        public WalletController(IUnitOfWork unitOfWork, IMapper mapper) : base(unitOfWork)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
-            _walletService = walletService;
-        }
-
-        [HttpGet("~/api/users/{userId:int}/wallet")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserWalletDetailsDto))]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<ActionResult<UserWalletDetailsDto>> GetUserWallet(int userId)
-        {
-            var denied = await DenyUnlessOwnerOrAdminAsync(userId);
-            if (denied != null)
-            {
-                return denied;
-            }
-
-            var walletDetails = await _walletService.GetUserWalletDetailsAsync(userId);
-
-            if (walletDetails == null)
-            {
-                return NotFound($"Wallet details for User ID {userId} not found.");
-            }
-
-            return Ok(walletDetails);
         }
 
         [HttpPut("{walletId:int}")]

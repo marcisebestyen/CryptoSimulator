@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -9,24 +9,50 @@ import { renderApp } from '../test/renderApp'
 import { server } from '../test/server'
 
 const userUrl = `http://localhost:3000${endpoints.user(7)}`
-const walletUrl = `http://localhost:3000${endpoints.userWallet(7)}`
+const portfolioUrl = `http://localhost:3000${endpoints.portfolio(7)}`
+const profitLossUrl = `http://localhost:3000${endpoints.profitLoss(7)}`
+const summaryUrl = `http://localhost:3000${endpoints.profitLossSummary(7)}`
 
 const user = { id: 7, role: 'User', username: 'jane', firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com' }
-const wallet = {
+const portfolio = {
   userId: 7,
   fiatBalance: 1234.5,
-  ownedCryptos: [
-    { cryptoId: 1, cryptoName: 'Bitcoin', amount: 2, currentPrice: 100, currentValue: 200 },
-    { cryptoId: 2, cryptoName: 'Ether', amount: 0, currentPrice: 5, currentValue: 0 },
+  holdings: [
+    { cryptoId: 1, cryptoName: 'Bitcoin', amountOwned: 2, currentExchangeRate: 100, currentValue: 200 },
+    { cryptoId: 2, cryptoName: 'Ether', amountOwned: 0, currentExchangeRate: 5, currentValue: 0 },
   ],
+  totalCryptoValue: 200,
+  totalPortfolioValue: 1434.5,
+}
+const rows = [
+  {
+    cryptoId: 1,
+    cryptoName: 'Bitcoin',
+    amountOwned: 2,
+    avgPurchasePrice: 77.25,
+    currentExchangeRate: 100,
+    totalCostBasis: 154.5,
+    currentValue: 200,
+    profitLossAmount: 44.25,
+    profitLossPercentage: 28.5,
+  },
+]
+const summary = {
+  userId: 7,
+  totalCurrentCryptoValue: 200,
+  totalCostBasis: 154.5,
+  totalProfitLossAmount: 45.5,
+  totalProfitLossPercentage: 29.45,
 }
 
 const money = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 2 })
 
-function useHandlers(walletBody: typeof wallet = wallet) {
+function useHandlers(portfolioBody: typeof portfolio = portfolio, rowsBody: typeof rows = rows, summaryBody: typeof summary = summary) {
   server.use(
     http.get(userUrl, () => HttpResponse.json(user)),
-    http.get(walletUrl, () => HttpResponse.json(walletBody)),
+    http.get(portfolioUrl, () => HttpResponse.json(portfolioBody)),
+    http.get(profitLossUrl, () => HttpResponse.json(rowsBody)),
+    http.get(summaryUrl, () => HttpResponse.json(summaryBody)),
   )
 }
 
@@ -134,18 +160,19 @@ describe('UserPage', () => {
     useHandlers()
     renderApp('/profile')
 
-    expect(await screen.findByText('Bitcoin')).toBeInTheDocument()
+    const card = (await screen.findByRole('heading', { name: 'Allocation' })).closest('.mantine-Card-root') as HTMLElement
+    expect(within(card).getByText('Bitcoin')).toBeInTheDocument()
+    expect(within(card).queryByRole('columnheader')).toBeNull()
     expect(screen.getAllByText(money(200)).length).toBeGreaterThan(0)
     expect(screen.getByText('100.0%')).toBeInTheDocument()
     expect(screen.getByText('0.0%')).toBeInTheDocument()
     expect(screen.getByText('Ether')).toBeInTheDocument()
     expect(screen.getByText('2 coins')).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Holdings chart' })).toBeInTheDocument()
-    expect(screen.queryByRole('columnheader')).not.toBeInTheDocument()
   })
 
-  it('shows an empty state and no chart for an empty wallet', async () => {
-    useHandlers({ ...wallet, ownedCryptos: [] })
+  it('shows an empty state and no chart for an empty portfolio', async () => {
+    useHandlers({ ...portfolio, holdings: [], totalCryptoValue: 0 }, [])
     renderApp('/profile')
 
     expect(await screen.findByText('You do not own any crypto yet.')).toBeInTheDocument()
@@ -160,12 +187,53 @@ describe('UserPage', () => {
     expect(await screen.findByText('Could not load profile')).toBeInTheDocument()
   })
 
-  it('shows an error when the wallet fails to load', async () => {
+  it('shows an error when the portfolio fails to load', async () => {
     useHandlers()
-    server.use(http.get(walletUrl, () => HttpResponse.error()))
+    server.use(http.get(portfolioUrl, () => HttpResponse.error()))
     renderApp('/profile')
 
-    expect(await screen.findByText('Could not load wallet')).toBeInTheDocument()
+    expect(await screen.findByText('Could not load portfolio')).toBeInTheDocument()
+  })
+
+  it('shows profit and loss summary with amount, percent and sign state', async () => {
+    useHandlers()
+    renderApp('/profile')
+
+    const amount = await screen.findByText('+45.5')
+    expect(amount).toHaveAttribute('data-sign', 'positive')
+    expect(screen.getByText('+29.45%')).toHaveAttribute('data-sign', 'positive')
+    expect(screen.getByText('Cost basis')).toBeInTheDocument()
+    expect(screen.getAllByText('154.5').length).toBeGreaterThan(0)
+  })
+
+  it('marks a negative profit and loss as negative', async () => {
+    useHandlers(portfolio, rows, { ...summary, totalProfitLossAmount: -20.5, totalProfitLossPercentage: -11.2 })
+    renderApp('/profile')
+
+    expect(await screen.findByText('-20.5')).toHaveAttribute('data-sign', 'negative')
+    expect(screen.getByText('-11.2%')).toHaveAttribute('data-sign', 'negative')
+  })
+
+  it('shows the average purchase price per coin', async () => {
+    useHandlers()
+    renderApp('/profile')
+
+    expect(await screen.findByText('77.25')).toBeInTheDocument()
+  })
+
+  it('shows an empty profit and loss state without holdings', async () => {
+    useHandlers(portfolio, [])
+    renderApp('/profile')
+
+    expect(await screen.findByText('No holdings yet.')).toBeInTheDocument()
+  })
+
+  it('shows an error when profit and loss fails to load', async () => {
+    useHandlers()
+    server.use(http.get(summaryUrl, () => HttpResponse.error()))
+    renderApp('/profile')
+
+    expect(await screen.findByText('Could not load profit and loss')).toBeInTheDocument()
   })
 
   it('has a Profile nav link', async () => {

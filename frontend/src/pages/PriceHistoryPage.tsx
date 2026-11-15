@@ -1,4 +1,4 @@
-import { Alert, Anchor, SegmentedControl, Stack, Text } from '@mantine/core'
+import { Alert, Anchor, SegmentedControl, Stack, Text, Title } from '@mantine/core'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { MantineReactTable, useMantineReactTable, type MRT_ColumnDef, type MRT_PaginationState } from 'mantine-react-table'
 import { useMemo, useState } from 'react'
@@ -9,6 +9,7 @@ import { fetchCrypto, fetchPriceHistory, type PriceHistoryItem } from '../api/cr
 
 import { PriceHistoryChart } from './PriceHistoryChart'
 import { PriceHistoryHeader } from './PriceHistoryHeader'
+import { marketTableProps } from './marketTableProps'
 import { lastN, sessionStats, stepDeltaPercent } from './priceStats'
 
 const CHART_POINTS = 100
@@ -66,7 +67,13 @@ export function PriceHistoryPage() {
 
   const columns = useMemo<MRT_ColumnDef<PriceHistoryItem>[]>(
     () => [
-      { accessorKey: 'value', header: 'Value', Cell: ({ cell }) => formatValue(cell.getValue<number>()) },
+      {
+        accessorKey: 'value',
+        header: 'Value',
+        mantineTableHeadCellProps: { align: 'right' },
+        mantineTableBodyCellProps: { align: 'right' },
+        Cell: ({ cell }) => `$${formatValue(cell.getValue<number>())}`,
+      },
       { accessorKey: 'from', header: 'From', Cell: ({ cell }) => formatDate(cell.getValue<string>()) },
       { accessorKey: 'to', header: 'To', Cell: ({ cell }) => formatTo(cell.getValue<string>()) },
       {
@@ -97,9 +104,8 @@ export function PriceHistoryPage() {
     onPaginationChange: setPagination,
     state: { isLoading: history.isLoading, pagination },
     mantinePaginationProps: { rowsPerPageOptions: ['10', '25', '50', '100'] },
-    mantinePaperProps: { withBorder: true, style: { backgroundColor: 'var(--grid-body-bg)' } },
-    mantineTableProps: { withTableBorder: true, withColumnBorders: true, withRowBorders: true, striped: false },
-    mantineTableHeadCellProps: { className: 'grid-head-cell' },
+    ...marketTableProps,
+    renderTopToolbarCustomActions: () => <Title order={3}>Price History</Title>,
     renderEmptyRowsFallback: () => <Text ta="center" p="md">No price history yet.</Text>,
   })
 
