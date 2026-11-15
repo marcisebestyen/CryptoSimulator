@@ -85,4 +85,11 @@ describe('LoginPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Cryptos' })).toBeInTheDocument()
   })
+
+  it('links to registration and password recovery', () => {
+    renderApp('/login')
+
+    expect(screen.getByRole('link', { name: 'Create an account' })).toHaveAttribute('href', '/register')
+    expect(screen.getByRole('link', { name: 'Forgot password?' })).toHaveAttribute('href', '/forgot-password')
+  })
 })

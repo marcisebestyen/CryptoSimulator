@@ -84,4 +84,44 @@ describe('apiFetch', () => {
 
     await expect(apiFetch('/api/ping')).rejects.not.toBeInstanceOf(ApiError)
   })
+
+  it('joins an errors array from a JSON error body into the message', async () => {
+    server.use(
+      http.get(url, () => HttpResponse.json({ errors: ['Email is taken.', 'Password too short.'] }, { status: 400 })),
+    )
+
+    await expect(apiFetch('/api/ping')).rejects.toMatchObject({
+      status: 400,
+      message: 'Email is taken. Password too short.',
+    })
+  })
+
+  it('flattens an ASP.NET validation errors object into the message', async () => {
+    server.use(
+      http.get(url, () =>
+        HttpResponse.json(
+          { errors: { Username: ['The Username field is required.'], Email: ['Bad email.', 'Too long.'] } },
+          { status: 400 },
+        ),
+      ),
+    )
+
+    await expect(apiFetch('/api/ping')).rejects.toMatchObject({
+      status: 400,
+      message: 'The Username field is required. Bad email. Too long.',
+    })
+  })
+
+  it.each([
+    ['an object with a non-array value', { errors: { Email: 'bad' } }],
+    ['an object with a non-string item', { errors: { Email: ['bad', 2] } }],
+    ['an array with a non-string', { errors: ['bad', 2] }],
+  ])('falls back to the raw body when errors is %s', async (_name, body) => {
+    server.use(http.get(url, () => HttpResponse.json(body, { status: 400 })))
+
+    await expect(apiFetch('/api/ping')).rejects.toMatchObject({
+      status: 400,
+      message: JSON.stringify(body),
+    })
+  })
 })

@@ -16,7 +16,7 @@ partial class CryptoSimulationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261114113827_InitialCreate";
+    public override string LastMigrationId => "20261115094737_AddUserRecoveryCodeHash";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -186,6 +186,9 @@ partial class CryptoSimulationDbContextModelSnapshot : ModelSnapshot
                     .IsRequired()
                     .HasColumnType("text");
 
+                b.Property<string>("RecoveryCodeHash")
+                    .HasColumnType("text");
+
                 b.Property<int>("Role")
                     .HasColumnType("integer");
 
@@ -197,6 +200,9 @@ partial class CryptoSimulationDbContextModelSnapshot : ModelSnapshot
                 b.HasKey("Id");
 
                 b.HasIndex("Email")
+                    .IsUnique();
+
+                b.HasIndex("RecoveryCodeHash")
                     .IsUnique();
 
                 b.ToTable("Users");

@@ -73,10 +73,10 @@ namespace CryptoSimulator.Controllers
 
         [AllowAnonymous]
         [HttpPost("register")]
-        [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(UserGetDto))]
+        [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(UserRegisterResponseDto))]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<UserGetDto>> Register([FromBody] UserRegisterDto registerDto)
+        public async Task<ActionResult<UserRegisterResponseDto>> Register([FromBody] UserRegisterDto registerDto)
         {
             var result = await _userService.RegisterAsync(registerDto.Username, registerDto.Email, registerDto.Password);
             if (!result.Succeeded)
@@ -97,13 +97,36 @@ namespace CryptoSimulator.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "An unexpected error occurred during the registration.");
             }
 
-            if (result.CreatedUser == null)
+            if (result.CreatedUser == null || result.RecoveryCode == null)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, "Registration completed but user data could not be retrieved.");
             }
             var userGetDto = _mapper.Map<UserGetDto>(result.CreatedUser);
 
-            return CreatedAtAction(nameof(GetUser), new { userId = userGetDto.Id }, userGetDto);
+            var response = new UserRegisterResponseDto { User = userGetDto, RecoveryCode = result.RecoveryCode };
+
+            return CreatedAtAction(nameof(GetUser), new { userId = userGetDto.Id }, response);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("forgot-password")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(RecoveryCodeResponseDto))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<RecoveryCodeResponseDto>> ForgotPassword([FromBody] UserForgotPasswordDto dto)
+        {
+            var result = await _userService.ResetPasswordAsync(dto.Email, dto.RecoveryCode, dto.NewPassword);
+            if (!result.Succeeded)
+            {
+                return BadRequest(result.Error);
+            }
+
+            if (result.NewRecoveryCode == null)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Password was reset but the new recovery code could not be retrieved.");
+            }
+
+            return Ok(new RecoveryCodeResponseDto { RecoveryCode = result.NewRecoveryCode });
         }
 
         [HttpPost("{userId:int}/change-password")]

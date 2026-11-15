@@ -22,6 +22,29 @@ export function setTokenGetter(getter: () => string | null): void {
   tokenGetter = getter
 }
 
+function errorText(body: string): string {
+  try {
+    const parsed: unknown = JSON.parse(body)
+    if (typeof parsed === 'object' && parsed !== null && 'errors' in parsed) {
+      const { errors } = parsed
+      if (Array.isArray(errors) && errors.every((item) => typeof item === 'string')) {
+        return errors.join(' ')
+      }
+      if (typeof errors === 'object' && errors !== null && !Array.isArray(errors)) {
+        const groups = Object.values(errors)
+        const isStringArray = (value: unknown): value is string[] =>
+          Array.isArray(value) && value.every((item) => typeof item === 'string')
+        if (groups.length > 0 && groups.every(isStringArray)) {
+          return groups.flat().join(' ')
+        }
+      }
+    }
+  } catch {
+    return body
+  }
+  return body
+}
+
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit & { skipUnauthorizedHandler?: boolean },
@@ -39,7 +62,7 @@ export async function apiFetch<T>(
     if (response.status === 401 && !skipUnauthorizedHandler) {
       unauthorizedHandler?.()
     }
-    throw new ApiError(response.status, await response.text())
+    throw new ApiError(response.status, errorText(await response.text()))
   }
 
   if (response.status === 204) {

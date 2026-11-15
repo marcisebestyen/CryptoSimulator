@@ -36,10 +36,11 @@ public class ResultTypesTests
     {
         var user = new User { Id = 3 };
 
-        var result = RegistrationResult.Success(user);
+        var result = RegistrationResult.Success(user, "Ab1!Ab1!");
 
         Assert.True(result.Succeeded);
         Assert.Same(user, result.CreatedUser);
+        Assert.Equal("Ab1!Ab1!", result.RecoveryCode);
         Assert.Empty(result.Errors);
     }
 

@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CryptoSimulator.Tests.Integration;
 
-public sealed record TestUser(HttpClient Client, int Id, string Username, string Email, string Password);
+public sealed record TestUser(HttpClient Client, int Id, string Username, string Email, string Password, string RecoveryCode);
 
 // Helpers shared by the integration test classes. Every call uses unique data.
 public static class TestApi
@@ -25,7 +25,7 @@ public static class TestApi
         var register = await client.PostAsJsonAsync("/api/users/register",
             new UserRegisterDto { Username = username, Email = email, Password = DefaultPassword });
         register.EnsureSuccessStatusCode();
-        var created = await register.Content.ReadFromJsonAsync<UserGetDto>()
+        var created = await register.Content.ReadFromJsonAsync<UserRegisterResponseDto>()
             ?? throw new InvalidOperationException("Register returned an empty body.");
 
         var login = await client.PostAsJsonAsync("/api/users/login",
@@ -35,7 +35,7 @@ public static class TestApi
             ?? throw new InvalidOperationException("Login returned an empty body.");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body.Token);
 
-        return new TestUser(client, created.Id, username, email, DefaultPassword);
+        return new TestUser(client, created.User.Id, username, email, DefaultPassword, created.RecoveryCode);
     }
 
     // Role is only set in the DB, so the user logs in again to get a token that carries it.

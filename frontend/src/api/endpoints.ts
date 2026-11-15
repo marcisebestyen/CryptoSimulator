@@ -1,5 +1,7 @@
 export const endpoints = {
   login: '/api/users/login',
+  register: '/api/users/register',
+  forgotPassword: '/api/users/forgot-password',
   user: (id: number) => `/api/users/${id}`,
   portfolio: (id: number) => `/api/users/${id}/portfolio`,
   profitLoss: (id: number) => `/api/users/${id}/portfolio/profit-loss`,
