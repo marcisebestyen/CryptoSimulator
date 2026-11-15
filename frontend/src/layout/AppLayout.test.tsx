@@ -20,6 +20,12 @@ describe('AppLayout', () => {
     expect(await screen.findByRole('link', { name: 'Cryptos' })).toBeInTheDocument()
   })
 
+  it('shows a Deposit link with the right href', async () => {
+    renderApp('/cryptos')
+
+    expect(await screen.findByRole('link', { name: 'Deposit' })).toHaveAttribute('href', '/deposit')
+  })
+
   it('shows Market and Transactions links with the right hrefs', async () => {
     renderApp('/cryptos')
 
