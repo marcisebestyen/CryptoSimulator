@@ -16,7 +16,7 @@ partial class CryptoSimulationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261115114908_AddSavedCardsAndDeposits";
+    public override string LastMigrationId => "20261115134612_AddOffers";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -113,14 +113,95 @@ partial class CryptoSimulationDbContextModelSnapshot : ModelSnapshot
                     .HasColumnType("integer");
 
                 b.Property<decimal>("Amount")
-                    .HasPrecision(18, 2)
-                    .HasColumnType("numeric(18,2)");
+                    .HasPrecision(18, 4)
+                    .HasColumnType("numeric(18,4)");
 
                 b.HasKey("WalletId", "CryptoId");
 
                 b.HasIndex("CryptoId");
 
                 b.ToTable("MyCryptos");
+            });
+
+        modelBuilder.Entity("CryptoSimulator.Entities.Offer", b =>
+            {
+                var id = b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("integer");
+
+                NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(id);
+
+                b.Property<decimal>("Amount")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("numeric(18,4)");
+
+                b.Property<decimal>("AskingPrice")
+                    .HasPrecision(18, 8)
+                    .HasColumnType("numeric(18,8)");
+
+                b.Property<DateTime?>("ClosedAt")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<int>("CryptoId")
+                    .HasColumnType("integer");
+
+                b.Property<decimal>("RemainingAmount")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("numeric(18,4)");
+
+                b.Property<int>("SellerWalletId")
+                    .HasColumnType("integer");
+
+                b.Property<string>("Status")
+                    .IsRequired()
+                    .HasColumnType("text");
+
+                b.HasKey("Id");
+
+                b.HasIndex("CryptoId");
+
+                b.HasIndex("SellerWalletId");
+
+                b.HasIndex("Status", "CryptoId");
+
+                b.ToTable("Offers");
+            });
+
+        modelBuilder.Entity("CryptoSimulator.Entities.OfferFill", b =>
+            {
+                var id = b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("integer");
+
+                NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(id);
+
+                b.Property<decimal>("Amount")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("numeric(18,4)");
+
+                b.Property<int>("BuyerWalletId")
+                    .HasColumnType("integer");
+
+                b.Property<DateTime>("Date")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<int>("OfferId")
+                    .HasColumnType("integer");
+
+                b.Property<decimal>("Price")
+                    .HasPrecision(18, 8)
+                    .HasColumnType("numeric(18,8)");
+
+                b.HasKey("Id");
+
+                b.HasIndex("BuyerWalletId");
+
+                b.HasIndex("OfferId");
+
+                b.ToTable("OfferFills");
             });
 
         modelBuilder.Entity("CryptoSimulator.Entities.PriceAlert", b =>
@@ -212,8 +293,8 @@ partial class CryptoSimulationDbContextModelSnapshot : ModelSnapshot
                 NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(id);
 
                 b.Property<decimal>("Amount")
-                    .HasPrecision(18, 2)
-                    .HasColumnType("numeric(18,2)");
+                    .HasPrecision(18, 4)
+                    .HasColumnType("numeric(18,4)");
 
                 b.Property<int>("CryptoId")
                     .HasColumnType("integer");
@@ -355,6 +436,44 @@ partial class CryptoSimulationDbContextModelSnapshot : ModelSnapshot
                 b.Navigation("Crypto");
 
                 b.Navigation("Wallet");
+            });
+
+        modelBuilder.Entity("CryptoSimulator.Entities.Offer", b =>
+            {
+                b.HasOne("CryptoSimulator.Entities.Crypto", "Crypto")
+                    .WithMany()
+                    .HasForeignKey("CryptoId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.HasOne("CryptoSimulator.Entities.Wallet", "SellerWallet")
+                    .WithMany()
+                    .HasForeignKey("SellerWalletId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.Navigation("Crypto");
+
+                b.Navigation("SellerWallet");
+            });
+
+        modelBuilder.Entity("CryptoSimulator.Entities.OfferFill", b =>
+            {
+                b.HasOne("CryptoSimulator.Entities.Wallet", "BuyerWallet")
+                    .WithMany()
+                    .HasForeignKey("BuyerWalletId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.HasOne("CryptoSimulator.Entities.Offer", "Offer")
+                    .WithMany()
+                    .HasForeignKey("OfferId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.Navigation("BuyerWallet");
+
+                b.Navigation("Offer");
             });
 
         modelBuilder.Entity("CryptoSimulator.Entities.PriceAlert", b =>

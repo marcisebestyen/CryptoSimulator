@@ -4,15 +4,6 @@ using CryptoSimulator.Repositories;
 
 namespace CryptoSimulator.Services
 {
-    public interface ITradeService
-    {
-        Task<bool> BuyCrypto(int userId, int cryptoId, decimal amount);
-        Task<bool> SellCrypto(int userId, int cryptoId, decimal amount);
-        Task<PortfolioDto?> GetPortfolio(int userId);
-        Task<IEnumerable<CryptoProfitLossDto>?> GetDetailedProfitLoss(int userId);
-        Task<PortfolioProfitLossDto?> GetPortfolioProfitLoss(int userId);
-    }
-
     public class TradeService : ITradeService
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -55,6 +46,14 @@ namespace CryptoSimulator.Services
                 return false;
             }
 
+            await using var dbTransaction = await _unitOfWork.BeginTransactionAsync();
+            var lockedWallet = await LockAndReloadWalletAsync(wallet.Id);
+            if (lockedWallet == null)
+            {
+                return false;
+            }
+
+            wallet = lockedWallet;
             decimal totalPrice = amount * cryptoLog.CurrentValue;
 
             if (wallet.Balance < totalPrice)
@@ -96,6 +95,7 @@ namespace CryptoSimulator.Services
             }
 
             await _unitOfWork.SaveAsync();
+            await _unitOfWork.CommitAsync();
             return true;
         }
 
@@ -131,6 +131,14 @@ namespace CryptoSimulator.Services
                 return false;
             }
 
+            await using var dbTransaction = await _unitOfWork.BeginTransactionAsync();
+            var lockedWallet = await LockAndReloadWalletAsync(wallet.Id);
+            if (lockedWallet == null)
+            {
+                return false;
+            }
+
+            wallet = lockedWallet;
             var myCrypto = _unitOfWork.MyCryptosRepository
                 .Get(mc => mc.CryptoId == cryptoId && mc.WalletId == wallet.Id)
                 .FirstOrDefault();
@@ -165,7 +173,15 @@ namespace CryptoSimulator.Services
             }
 
             await _unitOfWork.SaveAsync();
+            await _unitOfWork.CommitAsync();
             return true;
+        }
+
+        // The lock drops tracked wallet rows, so the wallet is read again to see other users' latest writes.
+        private async Task<Wallet?> LockAndReloadWalletAsync(int walletId)
+        {
+            await _unitOfWork.LockWalletAsync(walletId);
+            return _unitOfWork.WalletRepository.Get(w => w.Id == walletId).FirstOrDefault();
         }
 
         public async Task<PortfolioDto?> GetPortfolio(int userId)

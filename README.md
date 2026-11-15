@@ -111,7 +111,7 @@ Users may only touch their own data. Foreign data returns `403`; a missing user,
 
 - Owner or `Admin`: `GET/PUT/DELETE /api/users/{id}`, `PUT/DELETE /api/wallets/{id}`, `GET /api/transactions/{id}`, and the `GET /api/users/{id}/...` routes (portfolio, profit-loss, profit-loss/summary, transactions, alerts, alerts/history).
 - Owner only (an admin gets `403`): `POST /api/users/{id}/change-password`, `POST /api/trades/buy` and `/sell` (body `userId`), `POST /api/alerts` (body `userId`) and `DELETE /api/alerts/{id}`, and the deposit routes `POST /api/deposits` (body `userId`), `GET /api/users/{id}/deposits`, `GET /api/users/{id}/cards` and `DELETE /api/users/{id}/cards/{cardId}`. A `savedCardId` that belongs to another user returns `404`.
-- `Admin` only (a normal user gets `403`): `POST /api/cryptos`, `PUT /api/cryptos/{id}` (rename), `PUT /api/cryptos/{id}/price` and `DELETE /api/cryptos/{id}`. Every logged-in user may `GET` cryptos and their price history.
+- `Admin` only (a normal user gets `403`): `POST /api/cryptos`, `PUT /api/cryptos/{id}` (rename), `PUT /api/cryptos/{id}/price` and `DELETE /api/cryptos/{id}` (`409` when any offer, open or closed, references the crypto). Every logged-in user may `GET` cryptos and their price history.
 
 ### Cryptos
 
@@ -127,13 +127,39 @@ Users may only touch their own data. Foreign data returns `403`; a missing user,
 
 ### Validation (`400`)
 
-- `amount` of `POST /api/trades/buy` and `/sell` must be greater than 0.
+- `amount` of `POST /api/trades/buy` and `/sell` must be at least `0.0001` (it was `0.00000001` before the offers feature).
 - `balance` of `PUT /api/wallets/{id}` must not be negative.
 - `POST /api/deposits`: `amount` from `10.00` to `100000.00` with at most 2 decimals; card number 15-16 digits that pass the Luhn check; CVV 3-4 digits; expiry not in the past (a card is valid through the end of its month, at most 20 years ahead); exactly one of `savedCardId` or the new-card details (`holderName`, `cardNumber`, `expiryMonth`, `expiryYear`); `holderName` at most 100 characters; a saved card that has expired is rejected.
 
 `POST /api/deposits` returns `201` with `{ id, amount, last4, network, date, newBalance }`. `GET /api/users/{id}/deposits` returns a list of `{ id, amount, last4, network, date }` (newest first), and `GET /api/users/{id}/cards` a list of `{ id, holderName, last4, network, expiryMonth, expiryYear }`.
 
 `POST /api/trades/buy` and `/sell` return `204` on success and `400` with `"Transaction failed"` when the trade fails.
+
+### P2P offers
+
+All offer routes need a logged-in user; the seller or buyer is always the caller (no `userId` in the body). Errors are plain text messages, or ProblemDetails for request body validation.
+
+| Route | Body | Success | Errors |
+| --- | --- | --- | --- |
+| `GET /api/trades/offers` | - | `200` list of `MarketOfferDto` (open offers of other users) | - |
+| `GET /api/trades/offers/mine` | - | `200` list of `MyOfferDto` (the caller's offers) | - |
+| `POST /api/trades/offers` | `{ "cryptoId", "amount", "askingPrice" }` | `201` with the `MyOfferDto` | `400` invalid amount or price, crypto without a price, or not enough holdings; `404` unknown crypto or wallet |
+| `DELETE /api/trades/offers/{offerId}` | - | `204` | `403` "Only the seller can cancel this offer." (not your offer), `404` unknown offer, `409` offer already closed |
+| `POST /api/trades/offers/{offerId}/buy` | `{ "amount" }` | `204` | `400` invalid amount, more than is left, own offer not enough balance or a seller balance that cannot take the payment, `404` unknown offer, `409` offer already closed |
+
+`MarketOfferDto` is `{ id, sellerUsername, sellerCompletionRate, sellerTrades, cryptoId, cryptoName, remainingAmount, askingPrice, currentRate }`. `sellerCompletionRate` is `null` for a seller with no finished offers; otherwise it is the share of the seller's offers with a sale among offers with a sale plus cancelled offers without one.
+
+`MyOfferDto` is `{ id, cryptoId, cryptoName, amount, remainingAmount, soldAmount, askingPrice, currentRate, status, createdAt }`.
+
+How P2P offers work:
+
+- When you offer crypto it is put in escrow: it leaves your holdings until it is sold or the offer is cancelled.
+- A buyer may take only part of an offer (partial buy). The rest stays open.
+- Cancelling an offer returns the remaining (unsold) amount to the seller.
+- You cannot buy your own offer (`400`).
+- The buyer pays `amount x askingPrice`, rounded to 2 decimals. A buy whose total rounds to 0 is rejected.
+- Minimum `amount` is `0.0001` (at most 4 decimals); `askingPrice` is positive, below `10,000,000,000` and has at most 8 decimals.
+- Every fill records a sell transaction for the seller and a buy transaction for the buyer, so both feed the usual profit/loss stats.
 
 `GET /api/users/{id}/portfolio` returns `{ userId, fiatBalance, holdings, totalCryptoValue, totalPortfolioValue }`. Each entry in `holdings` is `{ cryptoId, cryptoName, amountOwned, currentExchangeRate, currentValue }`; `currentValue` is `amountOwned * currentExchangeRate`.
 

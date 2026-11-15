@@ -5,14 +5,6 @@ using CryptoSimulator.Results;
 
 namespace CryptoSimulator.Services
 {
-    public interface IDepositService
-    {
-        Task<DepositOutcome> DepositAsync(DepositCreateDto dto);
-        Task<IReadOnlyList<DepositHistoryDto>> GetDepositsAsync(int userId);
-        Task<IReadOnlyList<SavedCardGetDto>> GetCardsAsync(int userId);
-        Task<bool> DeleteCardAsync(int userId, int cardId);
-    }
-
     public class DepositService : IDepositService
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -55,6 +47,12 @@ namespace CryptoSimulator.Services
                 return DepositOutcome.Invalid("Wallet not found.");
             }
 
+            await using var dbTransaction = await _unitOfWork.BeginTransactionAsync();
+            var walletId = wallet.Id;
+            await _unitOfWork.LockWalletAsync(walletId);
+            // The lock drops the tracked wallet, so read it again for the latest balance.
+            wallet = _unitOfWork.WalletRepository.Get(w => w.Id == walletId).First();
+
             var card = cardResult.Card!;
             var deposit = new Deposit
             {
@@ -79,6 +77,7 @@ namespace CryptoSimulator.Services
             await _unitOfWork.WalletRepository.UpdateAsync(wallet);
             await _unitOfWork.DepositRepository.InsertAsync(deposit);
             await _unitOfWork.SaveAsync();
+            await _unitOfWork.CommitAsync();
 
             return DepositOutcome.Success(new DepositGetDto
             {

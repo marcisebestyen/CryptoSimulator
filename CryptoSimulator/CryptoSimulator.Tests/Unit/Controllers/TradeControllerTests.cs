@@ -18,7 +18,7 @@ public class TradeControllerTests
     public TradeControllerTests()
     {
         _uow.UserRepository.Returns(_users);
-        _sut = new TradeController(_uow, _service).SignedInAs();
+        _sut = new TradeController(_uow, _service, Substitute.For<IOfferService>()).SignedInAs();
     }
 
     private void ArrangeUser(bool exists) =>

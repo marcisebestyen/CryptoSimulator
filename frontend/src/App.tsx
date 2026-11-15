@@ -8,6 +8,7 @@ import { LoginPage } from './pages/LoginPage'
 import { MarketPage } from './pages/MarketPage'
 import { PriceHistoryPage } from './pages/PriceHistoryPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { TradePage } from './pages/TradePage'
 import { TransactionsPage } from './pages/TransactionsPage'
 import { UserPage } from './pages/UserPage'
 
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/cryptos/:cryptoId/price-history" element={<PriceHistoryPage />} />
           <Route path="/market" element={<MarketPage />} />
           <Route path="/market/transactions" element={<TransactionsPage />} />
+          <Route path="/trade" element={<TradePage />} />
           <Route path="/deposit" element={<DepositPage />} />
           <Route path="/profile" element={<UserPage />} />
         </Route>

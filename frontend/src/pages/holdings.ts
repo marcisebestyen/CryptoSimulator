@@ -3,7 +3,8 @@ import type { PortfolioItem } from '../api/trades'
 const SLICE_COLORS = ['blue.6', 'teal.6', 'grape.6', 'orange.6', 'cyan.6', 'pink.6', 'lime.6', 'yellow.6']
 
 export const formatMoney = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 2 })
-export const formatAmount = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 8 })
+export const formatPrice = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 8 })
+export const formatAmount = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 4 })
 
 export function toSlices(holdings: PortfolioItem[]) {
   return holdings

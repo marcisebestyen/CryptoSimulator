@@ -4,11 +4,6 @@ using CryptoSimulator.Repositories;
 
 namespace CryptoSimulator.Services
 {
-    public interface IAdminSeeder
-    {
-        Task SeedAsync();
-    }
-
     public class AdminSeeder : IAdminSeeder
     {
         private readonly IUnitOfWork _unitOfWork;

@@ -16,6 +16,8 @@ namespace CryptoSimulator.Data
         public DbSet<PriceAlert> PriceAlerts { get; set; }
         public DbSet<SavedCard> SavedCards { get; set; }
         public DbSet<Deposit> Deposits { get; set; }
+        public DbSet<Offer> Offers { get; set; }
+        public DbSet<OfferFill> OfferFills { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -93,11 +95,11 @@ namespace CryptoSimulator.Data
 
             modelBuilder.Entity<MyCryptos>()
                 .Property(mc => mc.Amount)
-                .HasPrecision(18, 2);
+                .HasPrecision(18, 4);
 
             modelBuilder.Entity<Transactions>()
                 .Property(t => t.Amount)
-                .HasPrecision(18, 2);
+                .HasPrecision(18, 4);
 
             modelBuilder.Entity<Transactions>()
                 .Property(t => t.ExchangeRate)
@@ -167,6 +169,63 @@ namespace CryptoSimulator.Data
                 .WithMany()
                 .HasForeignKey(d => d.SavedCardId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Offer>()
+                .HasKey(o => o.Id);
+
+            modelBuilder.Entity<Offer>()
+                .Property(o => o.Amount)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<Offer>()
+                .Property(o => o.RemainingAmount)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<Offer>()
+                .Property(o => o.AskingPrice)
+                .HasPrecision(18, 8);
+
+            modelBuilder.Entity<Offer>()
+                .Property(o => o.Status)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Offer>()
+                .HasIndex(o => new { o.Status, o.CryptoId });
+
+            modelBuilder.Entity<Offer>()
+                .HasOne(o => o.SellerWallet)
+                .WithMany()
+                .HasForeignKey(o => o.SellerWalletId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Offer>()
+                .HasOne(o => o.Crypto)
+                .WithMany()
+                .HasForeignKey(o => o.CryptoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<OfferFill>()
+                .HasKey(f => f.Id);
+
+            modelBuilder.Entity<OfferFill>()
+                .Property(f => f.Amount)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<OfferFill>()
+                .Property(f => f.Price)
+                .HasPrecision(18, 8);
+
+            modelBuilder.Entity<OfferFill>()
+                .HasOne(f => f.Offer)
+                .WithMany()
+                .HasForeignKey(f => f.OfferId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<OfferFill>()
+                .HasOne(f => f.BuyerWallet)
+                .WithMany()
+                .HasForeignKey(f => f.BuyerWalletId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             base.OnModelCreating(modelBuilder);
         }
