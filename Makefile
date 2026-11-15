@@ -89,7 +89,7 @@ db-reset: ## DELETE all local DB data and start fresh (asks first)
 frontend-install: ## Install frontend packages from the lockfile
 	cd frontend && pnpm install --frozen-lockfile
 
-frontend-dev: ## Start the Vite dev server on http://localhost:5173
+frontend-run: ## Start the Vite dev server on http://localhost:5173
 	cd frontend && pnpm dev
 
 frontend-build: ## Type-check and build the frontend

@@ -1,5 +1,5 @@
 import { AppShell, Button, Divider, NavLink, Text } from '@mantine/core'
-import { IconCoin, IconLogout, IconUser } from '@tabler/icons-react'
+import { IconArrowsExchange, IconCoin, IconHistory, IconLogout, IconUser } from '@tabler/icons-react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 
@@ -23,6 +23,22 @@ export function AppLayout() {
             label="Cryptos"
             leftSection={<IconCoin size={18} />}
             active={pathname === '/cryptos'}
+            style={{ borderRadius: 'var(--mantine-radius-default)' }}
+          />
+          <NavLink
+            component={Link}
+            to="/market"
+            label="Market"
+            leftSection={<IconArrowsExchange size={18} />}
+            active={pathname === '/market'}
+            style={{ borderRadius: 'var(--mantine-radius-default)' }}
+          />
+          <NavLink
+            component={Link}
+            to="/market/transactions"
+            label="Transactions"
+            leftSection={<IconHistory size={18} />}
+            active={pathname === '/market/transactions'}
             style={{ borderRadius: 'var(--mantine-radius-default)' }}
           />
         </AppShell.Section>

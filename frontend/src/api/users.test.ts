@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { server } from '../test/server'
 import { setTokenGetter } from './client'
-import { fetchUser, fetchWallet, updateUser } from './users'
+import { fetchUser, updateUser } from './users'
 
 const base = 'http://localhost:3000/api/users'
 
@@ -47,20 +47,5 @@ describe('updateUser', () => {
     await expect(updateUser(7, body)).resolves.toEqual({ ...user, ...body })
     expect(method).toBe('PUT')
     expect(received).toEqual(body)
-  })
-})
-
-describe('fetchWallet', () => {
-  it('gets the wallet of the user', async () => {
-    const wallet = {
-      userId: 7,
-      fiatBalance: 1000,
-      ownedCryptos: [
-        { cryptoId: 1, cryptoName: 'Bitcoin', amount: 2, currentPrice: 100, currentValue: 200 },
-      ],
-    }
-    server.use(http.get(`${base}/7/wallet`, () => HttpResponse.json(wallet)))
-
-    await expect(fetchWallet(7)).resolves.toEqual(wallet)
   })
 })

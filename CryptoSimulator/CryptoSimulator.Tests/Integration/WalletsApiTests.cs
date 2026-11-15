@@ -7,62 +7,31 @@ namespace CryptoSimulator.Tests.Integration;
 public class WalletsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
 {
     [Fact]
-    public async Task GetUserWallet_ReturnsStartingBalanceAndNoHoldings_ForNewUser()
+    public async Task Portfolio_ReturnsStartingBalanceAndNoHoldings_ForNewUser()
     {
         var user = await TestApi.CreateUserAsync(Factory);
 
-        var response = await user.Client.GetAsync($"/api/users/{user.Id}/wallet");
+        var response = await user.Client.GetAsync($"/api/users/{user.Id}/portfolio");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var wallet = await response.Content.ReadFromJsonAsync<UserWalletDetailsDto>();
-        Assert.Equal(user.Id, wallet!.UserId);
-        Assert.Equal(1000m, wallet.FiatBalance);
-        Assert.Empty(wallet.OwnedCryptos);
+        var portfolio = await response.Content.ReadFromJsonAsync<PortfolioDto>();
+        Assert.Equal(user.Id, portfolio!.UserId);
+        Assert.Equal(1000m, portfolio.FiatBalance);
+        Assert.Empty(portfolio.Holdings);
     }
 
     [Fact]
-    public async Task GetUserWallet_ReturnsPriceAndValue_ForOwnedCrypto()
+    public async Task Portfolio_ReturnsRateAndValue_ForOwnedCrypto()
     {
         var user = await TestApi.CreateUserAsync(Factory);
         var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
         (await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 2m)).EnsureSuccessStatusCode();
 
-        var wallet = await user.Client.GetFromJsonAsync<UserWalletDetailsDto>($"/api/users/{user.Id}/wallet");
+        var portfolio = await user.Client.GetFromJsonAsync<PortfolioDto>($"/api/users/{user.Id}/portfolio");
 
-        var owned = Assert.Single(wallet!.OwnedCryptos);
-        Assert.Equal(100m, owned.CurrentPrice);
+        var owned = Assert.Single(portfolio!.Holdings);
+        Assert.Equal(100m, owned.CurrentExchangeRate);
         Assert.Equal(200m, owned.CurrentValue);
-    }
-
-    [Fact]
-    public async Task GetUserWallet_Returns404_WhenUserMissing()
-    {
-        using var client = await Factory.CreateAuthorizedClientAsync();
-
-        var response = await client.GetAsync("/api/users/2000000000/wallet");
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetUserWallet_Returns401_WhenNoToken()
-    {
-        using var client = Factory.CreateClient();
-
-        var response = await client.GetAsync("/api/users/1/wallet");
-
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetUserWallet_Returns403_WhenReadingAnotherUser()
-    {
-        var a = await TestApi.CreateUserAsync(Factory);
-        var b = await TestApi.CreateUserAsync(Factory);
-
-        var response = await a.Client.GetAsync($"/api/users/{b.Id}/wallet");
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
@@ -72,13 +41,11 @@ public class WalletsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         var walletId = await TestApi.GetWalletIdAsync(Factory, user.Id);
 
         var response = await user.Client.PutAsJsonAsync($"/api/wallets/{walletId}", new WalletPutDto { Balance = 2500m });
-        var details = await user.Client.GetFromJsonAsync<UserWalletDetailsDto>($"/api/users/{user.Id}/wallet");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<WalletGetDto>();
         Assert.Equal(2500m, body!.Balance);
         Assert.Equal(user.Id, body.UserId);
-        Assert.Equal(2500m, details!.FiatBalance);
     }
 
     [Fact]
@@ -121,7 +88,7 @@ public class WalletsApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         var walletId = await TestApi.GetWalletIdAsync(Factory, user.Id);
 
         var delete = await user.Client.DeleteAsync($"/api/wallets/{walletId}");
-        var get = await user.Client.GetAsync($"/api/users/{user.Id}/wallet");
+        var get = await user.Client.GetAsync($"/api/users/{user.Id}/portfolio");
 
         Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);

@@ -23,7 +23,7 @@ export function PriceHistoryChart({ items }: PriceHistoryChartProps) {
         data={items}
         dataKey="from"
         series={[{ name: 'value', label: 'Price', color: 'blue.6' }]}
-        curveType="stepAfter"
+        curveType="monotone"
         withDots={items.length <= MAX_POINTS_WITH_DOTS}
         xAxisProps={{ tickFormatter: formatTick }}
         valueFormatter={formatValue}

@@ -11,20 +11,6 @@ export interface User {
   email: string
 }
 
-export interface OwnedCrypto {
-  cryptoId: number
-  cryptoName: string
-  amount: number
-  currentPrice: number
-  currentValue: number
-}
-
-export interface UserWallet {
-  userId: number
-  fiatBalance: number
-  ownedCryptos: OwnedCrypto[]
-}
-
 export interface UserUpdate {
   username: string
   firstName: string
@@ -37,8 +23,4 @@ export function fetchUser(id: number): Promise<User> {
 
 export function updateUser(id: number, body: UserUpdate): Promise<User> {
   return apiFetch<User>(endpoints.user(id), jsonRequest('PUT', body))
-}
-
-export function fetchWallet(id: number): Promise<UserWallet> {
-  return apiFetch<UserWallet>(endpoints.userWallet(id))
 }

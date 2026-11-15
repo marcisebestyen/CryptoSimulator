@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import type { OwnedCrypto } from '../api/users'
+import type { PortfolioItem } from '../api/trades'
 import { initials, sharePercent, sortByValue, toSlices, totalValue } from './holdings'
 
-const holding = (cryptoName: string, currentValue: number): OwnedCrypto => ({
+const holding = (cryptoName: string, currentValue: number): PortfolioItem => ({
   cryptoId: 1,
   cryptoName,
-  amount: 1,
-  currentPrice: currentValue,
+  amountOwned: 1,
+  currentExchangeRate: currentValue,
   currentValue,
 })
 

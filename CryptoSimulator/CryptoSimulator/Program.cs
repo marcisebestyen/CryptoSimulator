@@ -90,7 +90,6 @@ builder.Services.AddScoped<IPriceAlertService, PriceAlertService>();
 builder.Services.AddScoped<ITradeService, TradeService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
 // AutoMapper registration
 builder.Services.AddAutoMapper(cfg => cfg.AddMaps(Assembly.GetExecutingAssembly()));

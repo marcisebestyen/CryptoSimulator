@@ -80,7 +80,7 @@ Browsers may only call the API from origins listed in `Cors:AllowedOrigins` (a s
 
 Users may only touch their own data. Foreign data returns `403`; a missing user, wallet, transaction or alert returns `404`.
 
-- Owner or `Admin`: `GET/PUT/DELETE /api/users/{id}`, `PUT/DELETE /api/wallets/{id}`, `GET /api/transactions/{id}`, and the `GET /api/users/{id}/...` routes (wallet, portfolio, profit-loss, profit-loss/summary, transactions, alerts, alerts/history).
+- Owner or `Admin`: `GET/PUT/DELETE /api/users/{id}`, `PUT/DELETE /api/wallets/{id}`, `GET /api/transactions/{id}`, and the `GET /api/users/{id}/...` routes (portfolio, profit-loss, profit-loss/summary, transactions, alerts, alerts/history).
 - Owner only (an admin gets `403`): `POST /api/users/{id}/change-password`, `POST /api/trades/buy` and `/sell` (body `userId`), `POST /api/alerts` (body `userId`) and `DELETE /api/alerts/{id}`.
 - `Admin` only (a normal user gets `403`): `POST /api/cryptos`, `PUT /api/cryptos/{id}` (rename), `PUT /api/cryptos/{id}/price` and `DELETE /api/cryptos/{id}`. Every logged-in user may `GET` cryptos and their price history.
 
@@ -101,7 +101,9 @@ Users may only touch their own data. Foreign data returns `403`; a missing user,
 - `amount` of `POST /api/trades/buy` and `/sell` must be greater than 0.
 - `balance` of `PUT /api/wallets/{id}` must not be negative.
 
-`GET /api/users/{id}/wallet` lists each holding in `ownedCryptos` as `{ cryptoId, cryptoName, amount, currentPrice, currentValue }`. `currentPrice` is the open price record (`0` if there is none) and `currentValue` is `amount * currentPrice`.
+`POST /api/trades/buy` and `/sell` return `204` on success and `400` with `"Transaction failed"` when the trade fails.
+
+`GET /api/users/{id}/portfolio` returns `{ userId, fiatBalance, holdings, totalCryptoValue, totalPortfolioValue }`. Each entry in `holdings` is `{ cryptoId, cryptoName, amountOwned, currentExchangeRate, currentValue }`; `currentValue` is `amountOwned * currentExchangeRate`.
 
 `PUT /api/users/{id}` no longer accepts `email`; the body takes only the other profile fields and the email stays unchanged.
 
@@ -126,6 +128,14 @@ pnpm dev
 ```
 
 Open `http://localhost:5173`. Vite proxies `/api` to `http://localhost:5185`, so no CORS setup is needed. The page has a login form that calls `POST /api/users/login` to check the link.
+
+Pages:
+
+- Cryptos: list of cryptos with current prices.
+- Price history: paged price records per crypto.
+- Profile: portfolio with holdings chart and profit/loss.
+- Market: buy and sell cryptos.
+- Transactions: transaction history.
 
 Tests (Vitest, Testing Library, MSW; no backend needed):
 

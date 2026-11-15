@@ -27,7 +27,7 @@ namespace CryptoSimulator.Controllers
         }
 
         [HttpPost("buy")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -47,13 +47,13 @@ namespace CryptoSimulator.Controllers
             var result = await _tradeService.BuyCrypto(buyDto.UserId, buyDto.CryptoId, buyDto.Amount);
             if (result)
             {
-                return Ok("Crypto purchased successfully");
+                return NoContent();
             }
             return BadRequest("Transaction failed");
         }
 
         [HttpPost("sell")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -73,7 +73,7 @@ namespace CryptoSimulator.Controllers
             var result = await _tradeService.SellCrypto(sellDto.UserId, sellDto.CryptoId, sellDto.Amount);
             if (result)
             {
-                return Ok("Crypto sold successfully");
+                return NoContent();
             }
             return BadRequest("Transaction failed");
         }
