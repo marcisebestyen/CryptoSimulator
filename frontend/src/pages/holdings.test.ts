@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PortfolioItem } from '../api/trades'
-import { initials, sharePercent, sortByValue, toSlices, totalValue } from './holdings'
+import { formatAmount, formatPrice, initials, sharePercent, sortByValue, toSlices, totalValue } from './holdings'
 
 const holding = (cryptoName: string, currentValue: number): PortfolioItem => ({
   cryptoId: 1,
@@ -57,5 +57,22 @@ describe('initials', () => {
 
   it('works with one name only', () => {
     expect(initials('jane', '')).toBe('J')
+  })
+})
+
+describe('formatAmount', () => {
+  it('shows at most 4 decimals', () => {
+    expect(formatAmount(1.23456)).toBe((1.2346).toLocaleString(undefined, { maximumFractionDigits: 4 }))
+  })
+})
+
+describe('formatPrice', () => {
+  it('keeps up to 8 decimals so small prices do not show as 0', () => {
+    expect(formatPrice(0.00012345)).toBe((0.00012345).toLocaleString(undefined, { maximumFractionDigits: 8 }))
+    expect(formatPrice(0.00012345)).not.toBe('0')
+  })
+
+  it('trims trailing zeros', () => {
+    expect(formatPrice(12.5)).toBe((12.5).toLocaleString())
   })
 })

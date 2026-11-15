@@ -1,5 +1,6 @@
 ﻿using CryptoSimulator.DTOs;
 using CryptoSimulator.Repositories;
+using CryptoSimulator.Results;
 using CryptoSimulator.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,9 +14,11 @@ namespace CryptoSimulator.Controllers
     {
         IUnitOfWork _unitOfWork;
         ITradeService _tradeService;
+        IOfferService _offerService;
 
-        public TradeController(IUnitOfWork unitOfWork, ITradeService tradeService) : base(unitOfWork)
+        public TradeController(IUnitOfWork unitOfWork, ITradeService tradeService, IOfferService offerService) : base(unitOfWork)
         {
+            _offerService = offerService;
             _unitOfWork = unitOfWork;
             _tradeService = tradeService;
         }
@@ -151,6 +154,97 @@ namespace CryptoSimulator.Controllers
                 return NotFound($"User or Wallet not found for User ID {userId}.");
             }
             return Ok(result);
+        }
+
+        private ActionResult ToActionResult(OfferResult result)
+        {
+            return result.Status switch
+            {
+                OfferResultStatus.Success => NoContent(),
+                OfferResultStatus.Invalid => BadRequest(result.Error),
+                OfferResultStatus.NotFound => NotFound(result.Error),
+                OfferResultStatus.NotOwner => StatusCode(StatusCodes.Status403Forbidden, result.Error),
+                _ => Conflict(result.Error)
+            };
+        }
+
+        [HttpGet("offers")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<MarketOfferDto>))]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<IReadOnlyList<MarketOfferDto>>> GetMarketOffers(CancellationToken ct)
+        {
+            if (CurrentUserId is not int userId)
+            {
+                return Unauthorized();
+            }
+
+            return Ok(await _offerService.GetMarketOffersAsync(userId, ct));
+        }
+
+        [HttpGet("offers/mine")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<MyOfferDto>))]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<IReadOnlyList<MyOfferDto>>> GetMyOffers(CancellationToken ct)
+        {
+            if (CurrentUserId is not int userId)
+            {
+                return Unauthorized();
+            }
+
+            return Ok(await _offerService.GetMyOffersAsync(userId, ct));
+        }
+
+        [HttpPost("offers")]
+        [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(MyOfferDto))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<MyOfferDto>> CreateOffer([FromBody] CreateOfferDto dto, CancellationToken ct)
+        {
+            if (CurrentUserId is not int userId)
+            {
+                return Unauthorized();
+            }
+
+            var result = await _offerService.CreateAsync(userId, dto, ct);
+            return result.Status switch
+            {
+                OfferResultStatus.Success => Created("/api/trades/offers/mine", result.Offer),
+                OfferResultStatus.NotFound => NotFound(result.Error),
+                _ => BadRequest(result.Error)
+            };
+        }
+
+        [HttpDelete("offers/{offerId:int}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<ActionResult> CancelOffer(int offerId, CancellationToken ct)
+        {
+            if (CurrentUserId is not int userId)
+            {
+                return Unauthorized();
+            }
+
+            return ToActionResult(await _offerService.CancelAsync(userId, offerId, ct));
+        }
+
+        [HttpPost("offers/{offerId:int}/buy")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<ActionResult> BuyOffer(int offerId, [FromBody] BuyOfferDto dto, CancellationToken ct)
+        {
+            if (CurrentUserId is not int userId)
+            {
+                return Unauthorized();
+            }
+
+            return ToActionResult(await _offerService.BuyAsync(userId, offerId, dto.Amount, ct));
         }
     }
 }

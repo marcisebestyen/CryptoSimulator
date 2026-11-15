@@ -6,7 +6,7 @@ namespace CryptoSimulator.DTOs
     {
         public int UserId { get; set; }
         public int CryptoId { get; set; }
-        [Range(0.00000001, (double)decimal.MaxValue, ErrorMessage = "Amount must be a positive number.")]
+        [Range(0.0001, (double)decimal.MaxValue, ErrorMessage = "Amount must be a positive number.")]
         public decimal Amount { get; set; }
     }
 }

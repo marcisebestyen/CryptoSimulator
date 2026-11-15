@@ -7,15 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CryptoSimulator.Services
 {
-    public interface ICryptoService
-    {
-        Task<IEnumerable<CryptoGetWithCurrentValueDto>> GetAllWithCurrentValueAsync();
-        Task<bool> UpdateCryptoPriceAsync(int cryptoId, decimal newPrice, DateTime updateTimestamp);
-        Task<PagedResult<CryptoPriceHistoryDto>> GetCryptoPriceHistoryAsync(int cryptoId, int page, int pageSize);
-        Task<bool> IsNameTakenAsync(string name, int? excludeCryptoId = null);
-        Task AddWithInitialPriceAsync(Crypto crypto, decimal initialPrice, DateTime timestamp);
-    }
-
     public class CryptoService : ICryptoService
     {
         private readonly CryptoSimulationDbContext _context;
@@ -51,6 +42,11 @@ namespace CryptoSimulator.Services
         {
             var lowered = name.ToLower();
             return await _context.Cryptos.AnyAsync(c => c.Name.ToLower() == lowered && c.Id != excludeCryptoId);
+        }
+
+        public async Task<bool> HasOffersAsync(int cryptoId)
+        {
+            return await _context.Offers.AnyAsync(o => o.CryptoId == cryptoId);
         }
 
         // The log links to the crypto by navigation, so one SaveAsync writes both rows or none.

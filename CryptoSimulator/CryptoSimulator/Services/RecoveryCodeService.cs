@@ -4,12 +4,6 @@ using CryptoSimulator.Configuration;
 
 namespace CryptoSimulator.Services
 {
-    public interface IRecoveryCodeService
-    {
-        string Generate();
-        string Hash(string code);
-    }
-
     public class RecoveryCodeService : IRecoveryCodeService
     {
         private const int CodeLength = 8;

@@ -559,4 +559,58 @@ public class TradeServiceTests
         Assert.Equal(-200m, result.TotalProfitLossAmount);
         Assert.Equal(-66.67m, result.TotalProfitLossPercentage);
     }
+
+    // Wallet locking
+
+    [Fact]
+    public async Task Buy_BeginsLocksWalletSavesThenCommits_InOrder()
+    {
+        SetupHappyTrade(balance: 1000m, price: 100m);
+
+        Assert.True(await _sut.BuyCrypto(UserId, CryptoId, 1));
+
+        Received.InOrder(() =>
+        {
+            _uow.BeginTransactionAsync(Arg.Any<CancellationToken>());
+            _uow.LockOfferAndWalletsAsync(0, WalletId, WalletId, Arg.Any<CancellationToken>());
+            _uow.SaveAsync();
+            _uow.CommitAsync(Arg.Any<CancellationToken>());
+        });
+    }
+
+    [Fact]
+    public async Task Buy_DoesNotCommit_When_BalanceInsufficient()
+    {
+        SetupHappyTrade(balance: 1m, price: 100m);
+
+        Assert.False(await _sut.BuyCrypto(UserId, CryptoId, 1));
+
+        await _uow.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Sell_BeginsLocksWalletSavesThenCommits_InOrder()
+    {
+        SetupHappyTrade(balance: 0m, price: 100m, Holding(2m));
+
+        Assert.True(await _sut.SellCrypto(UserId, CryptoId, 1));
+
+        Received.InOrder(() =>
+        {
+            _uow.BeginTransactionAsync(Arg.Any<CancellationToken>());
+            _uow.LockOfferAndWalletsAsync(0, WalletId, WalletId, Arg.Any<CancellationToken>());
+            _uow.SaveAsync();
+            _uow.CommitAsync(Arg.Any<CancellationToken>());
+        });
+    }
+
+    [Fact]
+    public async Task Sell_DoesNotCommit_When_HoldingTooSmall()
+    {
+        SetupHappyTrade(balance: 0m, price: 100m, Holding(0.5m));
+
+        Assert.False(await _sut.SellCrypto(UserId, CryptoId, 1));
+
+        await _uow.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
+    }
 }

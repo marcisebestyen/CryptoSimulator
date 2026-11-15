@@ -130,6 +130,7 @@ namespace CryptoSimulator.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<ActionResult> DeleteCrypto(int cryptoId)
         {
             var crypto = await _unitOfWork.CryptoRepository.GetByIdAsync(new object[] { cryptoId }, null, null);
@@ -137,6 +138,11 @@ namespace CryptoSimulator.Controllers
             {
                 return NotFound($"Crypto with ID {cryptoId} not found.");
             }
+            if (await _cryptoService.HasOffersAsync(cryptoId))
+            {
+                return Conflict("This crypto cannot be deleted because offers reference it.");
+            }
+
             await _unitOfWork.CryptoRepository.DeleteAsync(cryptoId);
             await _unitOfWork.SaveAsync();
             return NoContent();

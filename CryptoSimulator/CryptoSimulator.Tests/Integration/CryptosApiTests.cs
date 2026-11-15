@@ -331,6 +331,37 @@ public class CryptosApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
     }
 
+    [Theory]
+    [InlineData(OfferStatus.Open)]
+    [InlineData(OfferStatus.Cancelled)]
+    public async Task Delete_Returns409_WhenAnOfferReferencesTheCrypto(OfferStatus status)
+    {
+        var client = (await TestApi.CreateAdminAsync(Factory)).Client;
+        var crypto = await TestApi.CreateCryptoAsync(client, 10m);
+        var seller = await TestApi.CreateUserAsync(Factory);
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CryptoSimulationDbContext>();
+            db.Offers.Add(new Offer
+            {
+                SellerWalletId = await TestApi.GetWalletIdAsync(Factory, seller.Id),
+                CryptoId = crypto.Id,
+                Amount = 1m,
+                RemainingAmount = 1m,
+                AskingPrice = 10m,
+                Status = status,
+                CreatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var delete = await client.DeleteAsync($"/api/cryptos/{crypto.Id}");
+
+        Assert.Equal(HttpStatusCode.Conflict, delete.StatusCode);
+        Assert.Contains("offers", await delete.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/cryptos/{crypto.Id}")).StatusCode);
+    }
+
     [Fact]
     public async Task Delete_Returns404_WhenMissing()
     {

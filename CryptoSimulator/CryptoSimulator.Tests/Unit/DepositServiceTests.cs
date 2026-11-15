@@ -383,4 +383,19 @@ public class DepositServiceTests
         Assert.Equal(7, card.Id);
         Assert.Equal("Visa", card.Network);
     }
+
+    [Fact]
+    public async Task Should_BeginLockWalletSaveThenCommit_When_Depositing()
+    {
+        var outcome = await _sut.DepositAsync(NewCardDto());
+
+        Assert.Equal(DepositStatus.Success, outcome.Status);
+        Received.InOrder(() =>
+        {
+            _uow.BeginTransactionAsync(Arg.Any<CancellationToken>());
+            _uow.LockOfferAndWalletsAsync(0, WalletId, WalletId, Arg.Any<CancellationToken>());
+            _uow.SaveAsync();
+            _uow.CommitAsync(Arg.Any<CancellationToken>());
+        });
+    }
 }

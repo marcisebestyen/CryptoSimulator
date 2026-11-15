@@ -29,6 +29,30 @@ public class TradesApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
     }
 
     [Fact]
+    public async Task Buy_Returns204AndKeepsFourDecimals_WhenAmountHasFourDecimals()
+    {
+        var user = await TestApi.CreateUserAsync(Factory);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
+
+        var response = await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 0.1234m);
+        var portfolio = await user.Client.GetFromJsonAsync<PortfolioDto>($"/api/users/{user.Id}/portfolio");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(0.1234m, Assert.Single(portfolio!.Holdings).AmountOwned);
+    }
+
+    [Fact]
+    public async Task Buy_Returns400_WhenAmountBelowMinimum()
+    {
+        var user = await TestApi.CreateUserAsync(Factory);
+        var crypto = await TestApi.CreateCryptoAsync(Factory, 100m);
+
+        var response = await TestApi.BuyAsync(user.Client, user.Id, crypto.Id, 0.00001m);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Buy_Returns400_WhenInsufficientFunds()
     {
         var user = await TestApi.CreateUserAsync(Factory);
