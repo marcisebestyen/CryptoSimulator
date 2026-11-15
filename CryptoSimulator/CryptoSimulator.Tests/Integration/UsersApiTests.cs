@@ -16,10 +16,44 @@ public class UsersApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
             new UserRegisterDto { Username = $"u-{suffix}", Email = $"{suffix}@example.com", Password = "pw1" });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var user = await response.Content.ReadFromJsonAsync<UserGetDto>();
-        Assert.NotNull(user);
-        Assert.Equal($"u-{suffix}", user.Username);
-        Assert.True(user.Id > 0);
+        var body = await response.Content.ReadFromJsonAsync<UserRegisterResponseDto>();
+        Assert.NotNull(body);
+        Assert.Equal($"u-{suffix}", body.User.Username);
+        Assert.True(body.User.Id > 0);
+    }
+
+    [Fact]
+    public async Task Register_Returns201WithRecoveryCode_WhenValid()
+    {
+        using var client = Factory.CreateClient();
+        var suffix = Guid.NewGuid().ToString("N")[..12];
+
+        var response = await client.PostAsJsonAsync("/api/users/register",
+            new UserRegisterDto { Username = $"u-{suffix}", Email = $"{suffix}@example.com", Password = "pw1" });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<UserRegisterResponseDto>();
+        Assert.NotNull(body);
+        Assert.Equal(8, body.RecoveryCode.Length);
+        Assert.Matches(@"^[A-Za-z0-9!@#$%^&*?\-_+=]{8}$", body.RecoveryCode);
+    }
+
+    [Fact]
+    public async Task Register_GivesDifferentCodes_ToDifferentUsers()
+    {
+        using var client = Factory.CreateClient();
+        var codes = new List<string>();
+        for (var i = 0; i < 2; i++)
+        {
+            var suffix = Guid.NewGuid().ToString("N")[..12];
+            var response = await client.PostAsJsonAsync("/api/users/register",
+                new UserRegisterDto { Username = $"u-{suffix}", Email = $"{suffix}@example.com", Password = "pw1" });
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<UserRegisterResponseDto>();
+            codes.Add(body!.RecoveryCode);
+        }
+
+        Assert.NotEqual(codes[0], codes[1]);
     }
 
     [Fact]
@@ -346,5 +380,79 @@ public class UsersApiTests(PostgresFixture postgres) : ApiTestBase(postgres)
         });
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private static UserForgotPasswordDto Reset(string email, string code, string password) =>
+        new() { Email = email, RecoveryCode = code, NewPassword = password };
+
+    [Fact]
+    public async Task ForgotPassword_ResetsPassword_ThenLoginWorksWithNewPassword()
+    {
+        var user = await TestApi.CreateUserAsync(Factory);
+        using var anon = Factory.CreateClient();
+
+        var response = await anon.PostAsJsonAsync("/api/users/forgot-password", Reset(user.Email, user.RecoveryCode, "N3w-password"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<RecoveryCodeResponseDto>();
+        Assert.NotNull(body);
+        Assert.Matches(@"^[A-Za-z0-9!@#$%^&*?\-_+=]{8}$", body.RecoveryCode);
+        Assert.NotEqual(user.RecoveryCode, body.RecoveryCode);
+
+        var newLogin = await anon.PostAsJsonAsync("/api/users/login", new UserLoginDto { Email = user.Email, Password = "N3w-password" });
+        var oldLogin = await anon.PostAsJsonAsync("/api/users/login", new UserLoginDto { Email = user.Email, Password = user.Password });
+        Assert.Equal(HttpStatusCode.OK, newLogin.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, oldLogin.StatusCode);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_OldCodeRejected_AfterReset()
+    {
+        var user = await TestApi.CreateUserAsync(Factory);
+        using var anon = Factory.CreateClient();
+        var first = await anon.PostAsJsonAsync("/api/users/forgot-password", Reset(user.Email, user.RecoveryCode, "N3w-password"));
+        first.EnsureSuccessStatusCode();
+
+        var second = await anon.PostAsJsonAsync("/api/users/forgot-password", Reset(user.Email, user.RecoveryCode, "An0ther-password"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
+        Assert.Equal("Invalid email or recovery code.", await second.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task ForgotPassword_Returns400_WhenCodeBelongsToOtherUser()
+    {
+        var a = await TestApi.CreateUserAsync(Factory);
+        var b = await TestApi.CreateUserAsync(Factory);
+        using var anon = Factory.CreateClient();
+
+        var response = await anon.PostAsJsonAsync("/api/users/forgot-password", Reset(b.Email, a.RecoveryCode, "N3w-password"));
+        var oldLogin = await anon.PostAsJsonAsync("/api/users/login",
+            new UserLoginDto { Email = b.Email, Password = b.Password });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Invalid email or recovery code.", await response.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, oldLogin.StatusCode);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_Returns400_WhenBodyMissingFields()
+    {
+        using var anon = Factory.CreateClient();
+
+        var response = await anon.PostAsJsonAsync("/api/users/forgot-password", new { Email = "a@b.com" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_IsAnonymous()
+    {
+        using var anon = Factory.CreateClient();
+
+        var response = await anon.PostAsJsonAsync("/api/users/forgot-password", Reset("nobody@example.com", "Ab1!Ab1!", "pw"));
+
+        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

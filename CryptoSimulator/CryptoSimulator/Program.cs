@@ -91,11 +91,20 @@ builder.Services.AddScoped<ITradeService, TradeService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
+builder.Services.AddSingleton(RecoveryCodeSettings.Load(builder.Configuration, env));
+builder.Services.AddSingleton<IRecoveryCodeService, RecoveryCodeService>();
+builder.Services.AddSingleton(AdminSettings.Load(builder.Configuration, env));
+builder.Services.AddScoped<IAdminSeeder, AdminSeeder>();
 // AutoMapper registration
 builder.Services.AddAutoMapper(cfg => cfg.AddMaps(Assembly.GetExecutingAssembly()));
 
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    await scope.ServiceProvider.GetRequiredService<IAdminSeeder>().SeedAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

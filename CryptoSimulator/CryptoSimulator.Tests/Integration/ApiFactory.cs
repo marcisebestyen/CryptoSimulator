@@ -7,11 +7,15 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace CryptoSimulator.Tests.Integration;
 
 public sealed class ApiFactory : WebApplicationFactory<Program>
 {
+    public const string AdminEmail = "seeded-admin@example.com";
+    public const string AdminPassword = "seeded-admin-password";
+
     private readonly string _connectionString;
 
     public ApiFactory(string connectionString)
@@ -26,6 +30,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Jwt:Key", "integration-tests-signing-key-0123456789");
         builder.UseSetting("Jwt:Issuer", "crypto-simulator-tests");
         builder.UseSetting("Jwt:Audience", "crypto-simulator-tests");
+        builder.UseSetting("RecoveryCode:Key", "integration-tests-recovery-key-0123456789");
+        builder.UseSetting("Admin:Username", "seeded-admin");
+        builder.UseSetting("Admin:Email", AdminEmail);
+        builder.UseSetting("Admin:Password", AdminPassword);
         builder.UseSetting("Cors:AllowedOrigins:0", "http://localhost:5173");
 
         builder.ConfigureServices(services =>
@@ -36,6 +44,20 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
                 services.Remove(descriptor);
             }
         });
+    }
+
+    // Startup seeds the admin, so the schema must exist before the host boots.
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        var options = new DbContextOptionsBuilder<CryptoSimulationDbContext>()
+            .UseNpgsql(_connectionString)
+            .Options;
+        using (var db = new CryptoSimulationDbContext(options))
+        {
+            db.Database.Migrate();
+        }
+
+        return base.CreateHost(builder);
     }
 
     public async Task MigrateAsync()

@@ -114,7 +114,7 @@ public class UserControllerTests
     [Fact]
     public async Task Should_Return500_When_RegisterSaveThrowsDbUpdateException()
     {
-        _userService.RegisterAsync("u", "e@e.e", "p").Returns(RegistrationResult.Success(new User()));
+        _userService.RegisterAsync("u", "e@e.e", "p").Returns(RegistrationResult.Success(new User(), "code"));
         _uow.SaveAsync().ThrowsAsync(new DbUpdateException());
 
         var result = await _sut.Register(RegisterDto());
@@ -127,7 +127,7 @@ public class UserControllerTests
     [Fact]
     public async Task Should_Return500_When_RegisterSaveThrowsUnexpectedException()
     {
-        _userService.RegisterAsync("u", "e@e.e", "p").Returns(RegistrationResult.Success(new User()));
+        _userService.RegisterAsync("u", "e@e.e", "p").Returns(RegistrationResult.Success(new User(), "code"));
         _uow.SaveAsync().ThrowsAsync(new InvalidOperationException());
 
         var result = await _sut.Register(RegisterDto());
@@ -140,7 +140,7 @@ public class UserControllerTests
     [Fact]
     public async Task Should_Return500_When_RegisterSucceededWithoutCreatedUser()
     {
-        var registration = RegistrationResult.Success(new User());
+        var registration = RegistrationResult.Success(new User(), "code");
         registration.CreatedUser = null;
         _userService.RegisterAsync("u", "e@e.e", "p").Returns(registration);
 
@@ -155,7 +155,7 @@ public class UserControllerTests
     {
         var user = new User { Id = 9 };
         var dto = new UserGetDto { Id = 9 };
-        _userService.RegisterAsync("u", "e@e.e", "p").Returns(RegistrationResult.Success(user));
+        _userService.RegisterAsync("u", "e@e.e", "p").Returns(RegistrationResult.Success(user, "Ab1!Ab1!"));
         _mapper.Map<UserGetDto>(user).Returns(dto);
 
         var result = await _sut.Register(RegisterDto());
@@ -163,7 +163,9 @@ public class UserControllerTests
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         Assert.Equal(nameof(UserController.GetUser), created.ActionName);
         Assert.Equal(9, created.RouteValues!["userId"]);
-        Assert.Same(dto, created.Value);
+        var body = Assert.IsType<UserRegisterResponseDto>(created.Value);
+        Assert.Same(dto, body.User);
+        Assert.Equal("Ab1!Ab1!", body.RecoveryCode);
     }
 
     private static UserChangePasswordDto PwDto() =>
@@ -340,5 +342,38 @@ public class UserControllerTests
 
         Assert.IsType<ForbidResult>(result);
         await _userService.DidNotReceive().ChangePasswordAsync(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task Should_ReturnOkWithNewCode_When_ForgotPasswordSucceeds()
+    {
+        _userService.ResetPasswordAsync("e@e.e", "old", "pw").Returns(PasswordResetResult.Success("newcode1"));
+
+        var result = await _sut.ForgotPassword(new UserForgotPasswordDto { Email = "e@e.e", RecoveryCode = "old", NewPassword = "pw" });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal("newcode1", Assert.IsType<RecoveryCodeResponseDto>(ok.Value).RecoveryCode);
+    }
+
+    [Fact]
+    public async Task Should_Return500_When_ForgotPasswordSucceededWithoutNewCode()
+    {
+        _userService.ResetPasswordAsync("e@e.e", "old", "pw").Returns(PasswordResetResult.Success(null!));
+
+        var result = await _sut.ForgotPassword(new UserForgotPasswordDto { Email = "e@e.e", RecoveryCode = "old", NewPassword = "pw" });
+
+        var obj = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(500, obj.StatusCode);
+    }
+
+    [Fact]
+    public async Task Should_ReturnBadRequest_When_ForgotPasswordFails()
+    {
+        _userService.ResetPasswordAsync("e@e.e", "old", "pw").Returns(PasswordResetResult.Failure("Invalid email or recovery code."));
+
+        var result = await _sut.ForgotPassword(new UserForgotPasswordDto { Email = "e@e.e", RecoveryCode = "old", NewPassword = "pw" });
+
+        var bad = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal("Invalid email or recovery code.", bad.Value);
     }
 }

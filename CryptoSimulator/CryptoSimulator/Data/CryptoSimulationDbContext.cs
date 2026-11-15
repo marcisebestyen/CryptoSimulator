@@ -77,6 +77,10 @@ namespace CryptoSimulator.Data
                 .HasIndex(u => u.Email)
                 .IsUnique();
 
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.RecoveryCodeHash)
+                .IsUnique();
+
             modelBuilder.Entity<Wallet>()
                 .Property(w => w.Balance)
                 .HasPrecision(18, 2);

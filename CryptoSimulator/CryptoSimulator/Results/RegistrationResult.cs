@@ -6,16 +6,18 @@ namespace CryptoSimulator.Results
     {
         public bool Succeeded { get; set; }
         public User? CreatedUser { get; set; }
+        public string? RecoveryCode { get; set; }
         public IEnumerable<string> Errors { get; private set; } = Enumerable.Empty<string>();
 
         private RegistrationResult() { }
 
-        public static RegistrationResult Success(User user)
+        public static RegistrationResult Success(User user, string recoveryCode)
         {
             return new RegistrationResult
             {
                 Succeeded = true,
-                CreatedUser = user
+                CreatedUser = user,
+                RecoveryCode = recoveryCode
             };
         }
 

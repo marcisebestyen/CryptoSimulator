@@ -32,11 +32,13 @@ ASP.NET Core (.NET 11) API that simulates a cryptocurrency exchange. Data lives 
    dotnet ef database update --project CryptoSimulator/CryptoSimulator
    ```
 
-4. Load the sample data (empty database only; the script refuses to run twice):
+4. Load the cryptos and their starting prices (empty database only; the script refuses to run twice):
 
    ```bash
    docker exec -i crypto-postgres psql -U admin-user -d crypto-db -v ON_ERROR_STOP=1 < initdb.sql
    ```
+
+   `initdb.sql` holds only the 15 cryptos and one current price each. There are no sample users: register in the UI or sign in as the admin (see below).
 
 ## Configuration
 
@@ -47,14 +49,26 @@ For any other environment, set `ConnectionStrings__DefaultConnection` instead; i
 
 ## Authentication
 
-All endpoints require a JWT bearer token, except `POST /api/users/login` and `POST /api/users/register`.
+All endpoints require a JWT bearer token, except `POST /api/users/login`, `POST /api/users/register` and `POST /api/users/forgot-password`.
 Configure signing in `.env` (see `.env.example`):
 
 - `JWT_KEY`: signing key, at least 32 characters (startup fails otherwise). Generate one with `openssl rand -base64 48`.
 - `JWT_ISSUER`, `JWT_AUDIENCE`: required.
 - `JWT_EXPIRY_MINUTES`: optional, defaults to `60`.
+- `RECOVERY_CODE_KEY`: secret key used to hash recovery codes, at least 32 characters (startup fails otherwise). Generate one with `openssl rand -base64 48`. Keep it only in the git-ignored `.env`; changing it makes all existing recovery codes stop working.
+
+### First admin
+
+The API creates the first admin at startup, only if no admin exists yet. Set these in `.env` (all three are required, startup fails otherwise):
+
+- `ADMIN_USERNAME`, `ADMIN_EMAIL`: must not already belong to another user.
+- `ADMIN_PASSWORD`: at least 8 characters.
+
+`Admin__Username`, `Admin__Email` and `Admin__Password` win over `.env`. The admin has an empty wallet and no recovery code, so forgot-password never works for the admin. Later changes to these values do not touch an existing admin.
 
 Environment variables `Jwt__Key`, `Jwt__Issuer`, `Jwt__Audience` and `Jwt__ExpiryMinutes` win over `.env`.
+
+Passwords are stored as BCrypt hashes.
 
 `POST /api/users/login` returns `200` with:
 
@@ -64,6 +78,21 @@ Environment variables `Jwt__Key`, `Jwt__Issuer`, `Jwt__Audience` and `Jwt__Expir
   "user": { "id": 1, "role": 0, "username": "...", "firstName": "...", "lastName": "...", "email": "..." }
 }
 ```
+
+`POST /api/users/register` returns `201` with the new user and a one-time recovery code:
+
+```json
+{
+  "user": { "id": 1, "role": 0, "username": "...", "firstName": "...", "lastName": "...", "email": "..." },
+  "recoveryCode": "Ab1!xY9?"
+}
+```
+
+The recovery code is 8 characters (letters, digits and symbols). It is shown only once and only its hash is stored, so the user must save it.
+
+`POST /api/users/forgot-password` resets a forgotten password. Body: `{ "email": "...", "recoveryCode": "...", "newPassword": "..." }`.
+`200` returns `{ "recoveryCode": "<new code>" }`; the old code stops working, so save the new one.
+`400` returns `Invalid email or recovery code.` (same text for an unknown email, a wrong code or a user with no code). A missing or blank field gets the standard validation `400` ProblemDetails instead.
 
 Send the token on every other request: `Authorization: Bearer <jwt>`. Missing, invalid or expired tokens get `401`.
 In Swagger UI use the Authorize button and paste the token.
@@ -127,10 +156,12 @@ pnpm install
 pnpm dev
 ```
 
-Open `http://localhost:5173`. Vite proxies `/api` to `http://localhost:5185`, so no CORS setup is needed. The page has a login form that calls `POST /api/users/login` to check the link.
+Open `http://localhost:5173`. Vite proxies `/api` to `http://localhost:5185`, so no CORS setup is needed. The app has login, register and forgot-password pages.
 
 Pages:
 
+- Register: creates an account and shows the recovery code once.
+- Forgot password: resets the password with the recovery code and shows the new code.
 - Cryptos: list of cryptos with current prices.
 - Price history: paged price records per crypto.
 - Profile: portfolio with holdings chart and profit/loss.
@@ -160,7 +191,7 @@ This deletes all data in the Docker volume:
 docker compose down -v && docker compose up -d
 ```
 
-Then repeat steps 3 and 4.
+Then repeat steps 3 and 4 (or `make db-update` and `make db-seed`).
 
 ## Notes
 

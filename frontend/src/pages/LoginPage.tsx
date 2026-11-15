@@ -1,7 +1,7 @@
-import { Alert, Button, Center, Paper, PasswordInput, Stack, TextInput, Title } from '@mantine/core'
+import { Alert, Anchor, Button, Center, Group, Paper, PasswordInput, Stack, TextInput, Title } from '@mantine/core'
 import { IconAt, IconLock } from '@tabler/icons-react'
 import { useState, type SubmitEvent } from 'react'
-import { Navigate, useNavigate } from 'react-router'
+import { Link, Navigate, useNavigate } from 'react-router'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 
@@ -55,6 +55,14 @@ export function LoginPage() {
             <Button type="submit" loading={submitting}>
               Log in
             </Button>
+            <Group justify="space-between">
+              <Anchor component={Link} to="/register" size="sm">
+                Create an account
+              </Anchor>
+              <Anchor component={Link} to="/forgot-password" size="sm">
+                Forgot password?
+              </Anchor>
+            </Group>
           </Stack>
         </form>
       </Paper>
