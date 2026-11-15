@@ -110,7 +110,7 @@ Browsers may only call the API from origins listed in `Cors:AllowedOrigins` (a s
 Users may only touch their own data. Foreign data returns `403`; a missing user, wallet, transaction or alert returns `404`.
 
 - Owner or `Admin`: `GET/PUT/DELETE /api/users/{id}`, `PUT/DELETE /api/wallets/{id}`, `GET /api/transactions/{id}`, and the `GET /api/users/{id}/...` routes (portfolio, profit-loss, profit-loss/summary, transactions, alerts, alerts/history).
-- Owner only (an admin gets `403`): `POST /api/users/{id}/change-password`, `POST /api/trades/buy` and `/sell` (body `userId`), `POST /api/alerts` (body `userId`) and `DELETE /api/alerts/{id}`.
+- Owner only (an admin gets `403`): `POST /api/users/{id}/change-password`, `POST /api/trades/buy` and `/sell` (body `userId`), `POST /api/alerts` (body `userId`) and `DELETE /api/alerts/{id}`, and the deposit routes `POST /api/deposits` (body `userId`), `GET /api/users/{id}/deposits`, `GET /api/users/{id}/cards` and `DELETE /api/users/{id}/cards/{cardId}`. A `savedCardId` that belongs to another user returns `404`.
 - `Admin` only (a normal user gets `403`): `POST /api/cryptos`, `PUT /api/cryptos/{id}` (rename), `PUT /api/cryptos/{id}/price` and `DELETE /api/cryptos/{id}`. Every logged-in user may `GET` cryptos and their price history.
 
 ### Cryptos
@@ -129,6 +129,9 @@ Users may only touch their own data. Foreign data returns `403`; a missing user,
 
 - `amount` of `POST /api/trades/buy` and `/sell` must be greater than 0.
 - `balance` of `PUT /api/wallets/{id}` must not be negative.
+- `POST /api/deposits`: `amount` from `10.00` to `100000.00` with at most 2 decimals; card number 15-16 digits that pass the Luhn check; CVV 3-4 digits; expiry not in the past (a card is valid through the end of its month, at most 20 years ahead); exactly one of `savedCardId` or the new-card details (`holderName`, `cardNumber`, `expiryMonth`, `expiryYear`); `holderName` at most 100 characters; a saved card that has expired is rejected.
+
+`POST /api/deposits` returns `201` with `{ id, amount, last4, network, date, newBalance }`. `GET /api/users/{id}/deposits` returns a list of `{ id, amount, last4, network, date }` (newest first), and `GET /api/users/{id}/cards` a list of `{ id, holderName, last4, network, expiryMonth, expiryYear }`.
 
 `POST /api/trades/buy` and `/sell` return `204` on success and `400` with `"Transaction failed"` when the trade fails.
 

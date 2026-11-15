@@ -87,6 +87,7 @@ builder.Services.AddSingleton<IRandomSource, SystemRandomSource>();
 builder.Services.AddSingleton<PriceSimulator>();
 builder.Services.AddHostedService<PriceUpdateService>();
 builder.Services.AddScoped<IPriceAlertService, PriceAlertService>();
+builder.Services.AddScoped<IDepositService, DepositService>();
 builder.Services.AddScoped<ITradeService, TradeService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IUserService, UserService>();

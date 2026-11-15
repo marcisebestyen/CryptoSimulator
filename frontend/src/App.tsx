@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router'
 import { RequireAuth } from './auth/RequireAuth'
 import { AppLayout } from './layout/AppLayout'
 import { CryptosPage } from './pages/CryptosPage'
+import { DepositPage } from './pages/DepositPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { LoginPage } from './pages/LoginPage'
 import { MarketPage } from './pages/MarketPage'
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/cryptos/:cryptoId/price-history" element={<PriceHistoryPage />} />
           <Route path="/market" element={<MarketPage />} />
           <Route path="/market/transactions" element={<TransactionsPage />} />
+          <Route path="/deposit" element={<DepositPage />} />
           <Route path="/profile" element={<UserPage />} />
         </Route>
       </Route>

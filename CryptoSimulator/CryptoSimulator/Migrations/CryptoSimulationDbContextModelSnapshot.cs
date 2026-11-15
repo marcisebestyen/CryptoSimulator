@@ -16,7 +16,7 @@ partial class CryptoSimulationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261115094737_AddUserRecoveryCodeHash";
+    public override string LastMigrationId => "20261115114908_AddSavedCardsAndDeposits";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -62,6 +62,46 @@ partial class CryptoSimulationDbContextModelSnapshot : ModelSnapshot
                 b.HasKey("CryptoId", "From");
 
                 b.ToTable("CryptoLogs");
+            });
+
+        modelBuilder.Entity("CryptoSimulator.Entities.Deposit", b =>
+            {
+                var id = b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("integer");
+
+                NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(id);
+
+                b.Property<decimal>("Amount")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("numeric(18,2)");
+
+                b.Property<DateTime>("Date")
+                    .HasColumnType("timestamp with time zone");
+
+                b.Property<string>("Last4")
+                    .IsRequired()
+                    .HasMaxLength(4)
+                    .HasColumnType("character(4)")
+                    .IsFixedLength();
+
+                b.Property<string>("Network")
+                    .IsRequired()
+                    .HasColumnType("text");
+
+                b.Property<int?>("SavedCardId")
+                    .HasColumnType("integer");
+
+                b.Property<int>("WalletId")
+                    .HasColumnType("integer");
+
+                b.HasKey("Id");
+
+                b.HasIndex("SavedCardId");
+
+                b.HasIndex("WalletId");
+
+                b.ToTable("Deposits");
             });
 
         modelBuilder.Entity("CryptoSimulator.Entities.MyCryptos", b =>
@@ -122,6 +162,45 @@ partial class CryptoSimulationDbContextModelSnapshot : ModelSnapshot
                 b.HasIndex("UserId");
 
                 b.ToTable("PriceAlerts");
+            });
+
+        modelBuilder.Entity("CryptoSimulator.Entities.SavedCard", b =>
+            {
+                var id = b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("integer");
+
+                NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(id);
+
+                b.Property<int>("ExpiryMonth")
+                    .HasColumnType("integer");
+
+                b.Property<int>("ExpiryYear")
+                    .HasColumnType("integer");
+
+                b.Property<string>("HolderName")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasColumnType("character varying(100)");
+
+                b.Property<string>("Last4")
+                    .IsRequired()
+                    .HasMaxLength(4)
+                    .HasColumnType("character(4)")
+                    .IsFixedLength();
+
+                b.Property<string>("Network")
+                    .IsRequired()
+                    .HasColumnType("text");
+
+                b.Property<int>("UserId")
+                    .HasColumnType("integer");
+
+                b.HasKey("Id");
+
+                b.HasIndex("UserId");
+
+                b.ToTable("SavedCards");
             });
 
         modelBuilder.Entity("CryptoSimulator.Entities.Transactions", b =>
@@ -241,6 +320,24 @@ partial class CryptoSimulationDbContextModelSnapshot : ModelSnapshot
                 b.Navigation("Crypto");
             });
 
+        modelBuilder.Entity("CryptoSimulator.Entities.Deposit", b =>
+            {
+                b.HasOne("CryptoSimulator.Entities.SavedCard", "SavedCard")
+                    .WithMany()
+                    .HasForeignKey("SavedCardId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                b.HasOne("CryptoSimulator.Entities.Wallet", "Wallet")
+                    .WithMany()
+                    .HasForeignKey("WalletId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+
+                b.Navigation("SavedCard");
+
+                b.Navigation("Wallet");
+            });
+
         modelBuilder.Entity("CryptoSimulator.Entities.MyCryptos", b =>
             {
                 b.HasOne("CryptoSimulator.Entities.Crypto", "Crypto")
@@ -275,6 +372,17 @@ partial class CryptoSimulationDbContextModelSnapshot : ModelSnapshot
                     .IsRequired();
 
                 b.Navigation("Crypto");
+
+                b.Navigation("User");
+            });
+
+        modelBuilder.Entity("CryptoSimulator.Entities.SavedCard", b =>
+            {
+                b.HasOne("CryptoSimulator.Entities.User", "User")
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
                 b.Navigation("User");
             });

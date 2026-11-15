@@ -14,6 +14,8 @@ namespace CryptoSimulator.Data
         public DbSet<User> Users { get; set; }
         public DbSet<Wallet> Wallets { get; set; }
         public DbSet<PriceAlert> PriceAlerts { get; set; }
+        public DbSet<SavedCard> SavedCards { get; set; }
+        public DbSet<Deposit> Deposits { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -115,6 +117,56 @@ namespace CryptoSimulator.Data
                 .WithMany()
                 .HasForeignKey(pa => pa.CryptoId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SavedCard>()
+                .HasKey(sc => sc.Id);
+
+            modelBuilder.Entity<SavedCard>()
+                .Property(sc => sc.HolderName)
+                .HasMaxLength(100);
+
+            modelBuilder.Entity<SavedCard>()
+                .Property(sc => sc.Last4)
+                .HasMaxLength(4)
+                .IsFixedLength();
+
+            modelBuilder.Entity<SavedCard>()
+                .Property(sc => sc.Network)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<SavedCard>()
+                .HasOne(sc => sc.User)
+                .WithMany()
+                .HasForeignKey(sc => sc.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Deposit>()
+                .HasKey(d => d.Id);
+
+            modelBuilder.Entity<Deposit>()
+                .Property(d => d.Last4)
+                .HasMaxLength(4)
+                .IsFixedLength();
+
+            modelBuilder.Entity<Deposit>()
+                .Property(d => d.Network)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Deposit>()
+                .Property(d => d.Amount)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Deposit>()
+                .HasOne(d => d.Wallet)
+                .WithMany()
+                .HasForeignKey(d => d.WalletId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Deposit>()
+                .HasOne(d => d.SavedCard)
+                .WithMany()
+                .HasForeignKey(d => d.SavedCardId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             base.OnModelCreating(modelBuilder);
         }
